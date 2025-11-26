@@ -1,4 +1,4 @@
-module github.com/dalemusser/stratalog
+module github.com/dalemusser/stratasave
 
 go 1.24.1
 

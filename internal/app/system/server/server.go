@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dalemusser/stratalog/internal/app/system/config"
-	"github.com/dalemusser/stratalog/internal/app/system/handler"
-	"github.com/dalemusser/stratalog/internal/app/system/routes"
+	"github.com/dalemusser/stratasave/internal/app/system/config"
+	"github.com/dalemusser/stratasave/internal/app/system/handler"
+	"github.com/dalemusser/stratasave/internal/app/system/routes"
 
 	"github.com/andybalholm/brotli"
 	"github.com/go-chi/chi/v5"

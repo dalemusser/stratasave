@@ -12,8 +12,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/dalemusser/stratalog/internal/platform/templatefunc"
-	"github.com/dalemusser/stratalog/internal/platform/views"
+	"github.com/dalemusser/stratasave/internal/platform/templatefunc"
+	"github.com/dalemusser/stratasave/internal/platform/views"
 	"go.uber.org/zap"
 )
 

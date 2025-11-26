@@ -9,12 +9,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/dalemusser/stratalog/internal/app/system/config"
-	"github.com/dalemusser/stratalog/internal/app/system/indexes"
-	"github.com/dalemusser/stratalog/internal/app/system/server"
-	"github.com/dalemusser/stratalog/internal/app/system/validators"
-	"github.com/dalemusser/stratalog/internal/platform/db"
-	"github.com/dalemusser/stratalog/internal/platform/render"
+	"github.com/dalemusser/stratasave/internal/app/system/config"
+	"github.com/dalemusser/stratasave/internal/app/system/indexes"
+	"github.com/dalemusser/stratasave/internal/app/system/server"
+	"github.com/dalemusser/stratasave/internal/app/system/validators"
+	"github.com/dalemusser/stratasave/internal/platform/db"
+	"github.com/dalemusser/stratasave/internal/platform/render"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"

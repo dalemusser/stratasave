@@ -2,7 +2,7 @@
 package handler
 
 import (
-	"github.com/dalemusser/stratalog/internal/app/system/config"
+	"github.com/dalemusser/stratasave/internal/app/system/config"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 

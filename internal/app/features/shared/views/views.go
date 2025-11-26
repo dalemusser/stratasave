@@ -4,7 +4,7 @@ package views
 import (
 	"embed"
 
-	pviews "github.com/dalemusser/stratalog/internal/platform/views"
+	pviews "github.com/dalemusser/stratasave/internal/platform/views"
 )
 
 //go:embed templates/*.gohtml
