@@ -1,0 +1,73 @@
+{{ define "announcements/show" }}
+  {{ template "layout" . }}
+{{ end }}
+
+{{ define "content" }}
+<div class="flex flex-col h-full">
+  <div class="mb-4 flex items-center">
+    <a href="{{ .BackURL }}"
+       class="text-sm px-3 py-1 border dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 mr-2 no-loader"
+       title="Go back">
+      ← Back
+    </a>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">View Announcement</h1>
+  </div>
+
+  <div class="p-4 bg-white dark:bg-gray-800 rounded shadow text-gray-700 dark:text-gray-300 text-sm flex-1 mb-2">
+    <div class="space-y-3 max-w-xl">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Title</label>
+        <input type="text" value="{{ .AnnTitle }}" readonly
+               class="w-full border dark:border-gray-600 p-2 rounded bg-gray-50 dark:bg-gray-700 dark:text-gray-100 text-sm" />
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Content</label>
+        <textarea readonly rows="3"
+                  class="w-full border dark:border-gray-600 p-2 rounded bg-gray-50 dark:bg-gray-700 dark:text-gray-100 text-sm">{{ .Content }}</textarea>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Type</label>
+        <input type="text" value="{{ .Type }}" readonly
+               class="w-full border dark:border-gray-600 p-2 rounded bg-gray-50 dark:bg-gray-700 dark:text-gray-100 text-sm" />
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+        <input type="text" value="{{ if .Active }}Active{{ else }}Inactive{{ end }}" readonly
+               class="w-full border dark:border-gray-600 p-2 rounded bg-gray-50 dark:bg-gray-700 dark:text-gray-100 text-sm" />
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Dismissible</label>
+        <input type="text" value="{{ if .Dismissible }}Yes{{ else }}No{{ end }}" readonly
+               class="w-full border dark:border-gray-600 p-2 rounded bg-gray-50 dark:bg-gray-700 dark:text-gray-100 text-sm" />
+      </div>
+
+      {{ if or .StartsAt .EndsAt }}
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Starts At</label>
+          <input type="text" value="{{ if .StartsAt }}{{ .StartsAt }}{{ else }}Not set{{ end }}" readonly
+                 class="w-full border dark:border-gray-600 p-2 rounded bg-gray-50 dark:bg-gray-700 dark:text-gray-100 text-sm" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ends At</label>
+          <input type="text" value="{{ if .EndsAt }}{{ .EndsAt }}{{ else }}Not set{{ end }}" readonly
+                 class="w-full border dark:border-gray-600 p-2 rounded bg-gray-50 dark:bg-gray-700 dark:text-gray-100 text-sm" />
+        </div>
+      </div>
+      {{ end }}
+
+      <!-- Action button -->
+      <div class="pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
+        <a href="/announcements/{{ .ID }}/edit?return={{ .BackURL | urlquery }}"
+           class="px-3 py-1 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700">
+          Edit Announcement
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{{ end }}

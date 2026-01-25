@@ -1,0 +1,211 @@
+{{ define "admin_status" }}
+  {{ template "layout" . }}
+{{ end }}
+
+{{ define "content" }}
+<div class="mb-3">
+  <h1 class="text-2xl font-semibold text-gray-800 dark:text-gray-200">🔧 System Status</h1>
+  <p class="text-gray-500 dark:text-gray-400 text-sm">Server health and diagnostics</p>
+</div>
+
+{{ if .RenewSuccess }}
+<div class="mb-4 p-3 bg-green-100 dark:bg-green-900/40 border border-green-200 dark:border-green-800 rounded-lg">
+  <p class="text-green-700 dark:text-green-300 text-sm">Certificate renewal initiated successfully. The new certificate should be active shortly.</p>
+</div>
+{{ end }}
+
+<!-- Key Metrics Row -->
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+  <!-- Certificate Status -->
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-2 text-center">
+    <div class="text-gray-500 dark:text-gray-400 text-xs">Certificate</div>
+    {{ if .CertError }}
+      {{ if eq .CertError "localhost - no TLS" }}
+        <div class="text-gray-500 dark:text-gray-400 text-lg font-bold">Dev</div>
+      {{ else }}
+        <div class="text-red-600 dark:text-red-400 text-lg font-bold">Error</div>
+      {{ end }}
+    {{ else if .CertValid }}
+      {{ if .CertWarning }}
+        <div class="text-amber-600 dark:text-amber-400 text-lg font-bold">{{ .CertDaysLeft }}d</div>
+      {{ else }}
+        <div class="text-green-600 dark:text-green-400 text-lg font-bold">{{ .CertDaysLeft }}d</div>
+      {{ end }}
+    {{ else }}
+      <div class="text-red-600 dark:text-red-400 text-lg font-bold">Expired</div>
+    {{ end }}
+  </div>
+
+  <!-- Database Status -->
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-2 text-center">
+    <div class="text-gray-500 dark:text-gray-400 text-xs">Database</div>
+    {{ if .DBConnected }}
+      <div class="text-green-600 dark:text-green-400 text-lg font-bold">{{ .DBPingMS }}ms</div>
+    {{ else }}
+      <div class="text-red-600 dark:text-red-400 text-lg font-bold">Down</div>
+    {{ end }}
+  </div>
+
+  <!-- Uptime -->
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-2 text-center">
+    <div class="text-gray-500 dark:text-gray-400 text-xs">Uptime</div>
+    <div class="text-indigo-600 dark:text-indigo-400 text-lg font-bold">{{ .Uptime }}</div>
+  </div>
+
+  <!-- Memory -->
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-2 text-center">
+    <div class="text-gray-500 dark:text-gray-400 text-xs">Memory</div>
+    <div class="text-indigo-600 dark:text-indigo-400 text-lg font-bold">{{ .MemAlloc }}</div>
+  </div>
+</div>
+
+<!-- Details Section -->
+<div class="bg-white dark:bg-gray-800 rounded-lg shadow p-3">
+  <table class="w-full text-sm">
+    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+      <!-- TLS Certificate Section -->
+      <tr>
+        <td colspan="2" class="py-2">
+          <span class="font-semibold text-gray-700 dark:text-gray-300">TLS Certificate</span>
+        </td>
+      </tr>
+      <tr>
+        <td class="py-1.5 text-gray-500 dark:text-gray-400 w-32">Status</td>
+        <td class="py-1.5">
+          {{ if .CertError }}
+            {{ if eq .CertError "localhost - no TLS" }}
+              <span class="text-gray-600 dark:text-gray-400">Development</span>
+            {{ else }}
+              <span class="text-red-600 dark:text-red-400">Error</span>
+            {{ end }}
+          {{ else if .CertValid }}
+            {{ if .CertWarning }}
+              <span class="text-amber-600 dark:text-amber-400">Expiring Soon</span>
+            {{ else }}
+              <span class="text-green-600 dark:text-green-400">Valid</span>
+            {{ end }}
+          {{ else }}
+            <span class="text-red-600 dark:text-red-400">Expired</span>
+          {{ end }}
+        </td>
+      </tr>
+      {{ if .CertError }}
+        {{ if ne .CertError "localhost - no TLS" }}
+        <tr>
+          <td class="py-1.5 text-gray-500 dark:text-gray-400 w-32">Error</td>
+          <td class="py-1.5 text-red-600 dark:text-red-400">{{ .CertError }}</td>
+        </tr>
+        {{ end }}
+      {{ else }}
+      <tr>
+        <td class="py-1.5 text-gray-500 dark:text-gray-400 w-32">Host</td>
+        <td class="py-1.5 text-gray-800 dark:text-gray-200">{{ .CertHost }}</td>
+      </tr>
+      <tr>
+        <td class="py-1.5 text-gray-500 dark:text-gray-400">Expires</td>
+        <td class="py-1.5 text-gray-800 dark:text-gray-200">{{ .CertExpiresAt }} <span class="text-gray-500 dark:text-gray-400">({{ .CertExpiresIn }})</span></td>
+      </tr>
+      <tr>
+        <td class="py-1.5 text-gray-500 dark:text-gray-400">Issuer</td>
+        <td class="py-1.5 text-gray-800 dark:text-gray-200">{{ .CertIssuer }}</td>
+      </tr>
+      {{ if .CanRenewCert }}
+      <tr>
+        <td class="py-1.5 text-gray-500 dark:text-gray-400">Challenge</td>
+        <td class="py-1.5 text-gray-800 dark:text-gray-200">{{ .CertChallengeType }} (Let's Encrypt)</td>
+      </tr>
+      <tr>
+        <td class="py-1.5 text-gray-500 dark:text-gray-400">Renewal</td>
+        <td class="py-1.5">
+          <form method="POST" action="/admin/status/renew" class="inline" onsubmit="return confirm('Force certificate renewal? This may take a few minutes.');">
+            <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+            <button type="submit" class="px-3 py-1 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded transition-colors">
+              Force Renewal
+            </button>
+          </form>
+        </td>
+      </tr>
+      {{ end }}
+      {{ end }}
+
+      <!-- Database Section -->
+      <tr>
+        <td colspan="2" class="pt-4 pb-2">
+          <span class="font-semibold text-gray-700 dark:text-gray-300">Database</span>
+        </td>
+      </tr>
+      <tr>
+        <td class="py-1.5 text-gray-500 dark:text-gray-400 w-32">Status</td>
+        <td class="py-1.5">
+          {{ if .DBConnected }}
+            <span class="text-green-600 dark:text-green-400">Connected</span>
+          {{ else }}
+            <span class="text-red-600 dark:text-red-400">Disconnected</span>
+          {{ end }}
+        </td>
+      </tr>
+      {{ if .DBConnected }}
+        {{ if .DBVersion }}
+        <tr>
+          <td class="py-1.5 text-gray-500 dark:text-gray-400 w-32">MongoDB</td>
+          <td class="py-1.5 text-gray-800 dark:text-gray-200">v{{ .DBVersion }}</td>
+        </tr>
+        {{ end }}
+        <tr>
+          <td class="py-1.5 text-gray-500 dark:text-gray-400">Ping</td>
+          <td class="py-1.5 text-gray-800 dark:text-gray-200">{{ .DBPingMS }}ms</td>
+        </tr>
+      {{ else }}
+        <tr>
+          <td class="py-1.5 text-gray-500 dark:text-gray-400 w-32">Error</td>
+          <td class="py-1.5 text-red-600 dark:text-red-400">{{ .DBError }}</td>
+        </tr>
+      {{ end }}
+
+      <!-- System Section -->
+      <tr>
+        <td colspan="2" class="pt-4 pb-2">
+          <span class="font-semibold text-gray-700 dark:text-gray-300">System</span>
+        </td>
+      </tr>
+      <tr>
+        <td class="py-1.5 text-gray-500 dark:text-gray-400 w-32">Go Version</td>
+        <td class="py-1.5 text-gray-800 dark:text-gray-200">{{ .GoVersion }}</td>
+      </tr>
+      <tr>
+        <td class="py-1.5 text-gray-500 dark:text-gray-400">Uptime</td>
+        <td class="py-1.5 text-gray-800 dark:text-gray-200">{{ .Uptime }}</td>
+      </tr>
+      <tr>
+        <td class="py-1.5 text-gray-500 dark:text-gray-400">Goroutines</td>
+        <td class="py-1.5 text-gray-800 dark:text-gray-200">{{ .NumGoroutine }}</td>
+      </tr>
+      <tr>
+        <td class="py-1.5 text-gray-500 dark:text-gray-400">Memory</td>
+        <td class="py-1.5 text-gray-800 dark:text-gray-200">{{ .MemAlloc }}</td>
+      </tr>
+
+    </tbody>
+  </table>
+</div>
+
+<!-- Configuration Section -->
+<div class="bg-white dark:bg-gray-800 rounded-lg shadow p-3 mt-4">
+  <div class="font-semibold text-gray-700 dark:text-gray-300 mb-3">Configuration</div>
+  <div class="space-y-4">
+    {{ range .ConfigGroups }}
+    <div>
+      <div class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 mb-1.5 uppercase tracking-wide">{{ .Name }}</div>
+      <div class="space-y-0.5">
+        {{ range .Items }}
+        <div class="flex text-xs font-mono">
+          <div class="text-gray-500 dark:text-gray-400 shrink-0" style="width: 200px;">{{ .Name }}</div>
+          <div class="text-gray-800 dark:text-gray-200 break-all">{{ .Value }}</div>
+        </div>
+        {{ end }}
+      </div>
+    </div>
+    {{ end }}
+  </div>
+</div>
+{{ end }}

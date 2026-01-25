@@ -1,0 +1,48 @@
+# Git
+.git
+.gitignore
+
+# Build artifacts
+bin/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test artifacts
+coverage.out
+coverage.html
+*.test
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local development
+.env
+.env.local
+*.local.toml
+config.toml
+
+# Tailwind CLI (downloaded separately in Docker)
+tailwindcss
+
+# Documentation
+docs/
+*.md
+!internal/
+
+# Test files
+*_test.go
+internal/testutil/
+
+# Air (live reload)
+.air.toml
+tmp/

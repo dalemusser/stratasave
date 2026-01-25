@@ -1,0 +1,15 @@
+{{/* errors/error - Error page */}}
+{{ define "errors/error" }}
+{{ template "layout" . }}
+{{ end }}
+
+{{ define "content" }}
+<div class="text-center py-16">
+    <h1 class="text-6xl font-bold text-gray-300 dark:text-gray-600 mb-4">{{ .Status }}</h1>
+    <h2 class="text-2xl font-semibold mb-4">{{ .Message }}</h2>
+    {{ if .Description }}
+    <p class="text-gray-600 dark:text-gray-400 mb-8">{{ .Description }}</p>
+    {{ end }}
+    <a href="/" class="bg-blue-600 text-white px-6 py-3 rounded hover:bg-blue-700">Go Home</a>
+</div>
+{{ end }}

@@ -1,0 +1,204 @@
+{{ define "systemusers/edit" }}
+  {{ template "layout" . }}
+{{ end }}
+
+{{ define "content" }}
+<div class="flex flex-col h-full">
+<div class="mb-4 flex items-center">
+  <a href="{{ .BackURL }}"
+     class="text-sm px-3 py-1 border dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 mr-2 no-loader"
+     title="Go back">
+    ← Back
+  </a>
+  <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">✏️ Edit System User</h1>
+</div>
+
+<div class="p-4 bg-white dark:bg-gray-800 rounded shadow text-gray-700 dark:text-gray-300 text-sm flex-1 mb-2">
+  {{ if .Error }}
+    <div class="mb-4 p-2 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded max-w-xl">
+      {{ .Error }}
+    </div>
+  {{ end }}
+
+  {{ if .Success }}
+    <div class="mb-4 p-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded max-w-xl">
+      {{ .Success }}
+    </div>
+  {{ end }}
+
+  <form method="post" action="/system-users/{{ .ID }}" class="space-y-3 max-w-xl">
+  <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+  <input type="hidden" name="return" value="{{ .BackURL }}">
+
+  <div>
+    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
+    <input name="full_name" type="text" value="{{ .FullName }}"
+           class="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 p-2 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" required />
+  </div>
+
+  <!-- Role -->
+  <div>
+    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Role</label>
+    <select name="role" id="role-select"
+            class="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            {{ if .IsSelf }}disabled{{ end }}>
+      {{ range .AvailableRoles }}
+      <option value="{{ . }}" {{ if eq . $.SelectedRole }}selected{{ end }}>{{ . }}</option>
+      {{ end }}
+    </select>
+    {{ if .IsSelf }}
+      <input type="hidden" name="role" value="{{ .SelectedRole }}">
+      <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">You can't change your own role. Ask another admin to make this change.</p>
+    {{ end }}
+  </div>
+
+  <!-- Auth Method -->
+  <div>
+    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Auth Method</label>
+    <select name="auth_method" id="auth-method-select"
+            class="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+      <option value="trust" {{ if eq .Auth "trust" }}selected{{ end }}>trust</option>
+      <option value="password" {{ if eq .Auth "password" }}selected{{ end }}>password</option>
+      <option value="email" {{ if eq .Auth "email" }}selected{{ end }}>email</option>
+      <option value="google" {{ if eq .Auth "google" }}selected{{ end }}>google</option>
+    </select>
+  </div>
+
+  <!-- Login ID (shown for: trust, password; hidden for: email, google) -->
+  <div id="login-id-section" class="{{ if or (eq .Auth "email") (eq .Auth "google") }}hidden{{ end }}">
+    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Login ID</label>
+    <input name="login_id" id="login-id-input" type="text" value="{{ .LoginID }}"
+           class="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+  </div>
+
+  <!-- Email (shown for all, but required for: email, google; optional for others) -->
+  <div id="email-section">
+    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+      Email
+      <span id="email-optional-label" class="text-gray-400 font-normal {{ if or (eq .Auth "email") (eq .Auth "google") }}hidden{{ end }}">(optional)</span>
+    </label>
+    <input name="email" id="email-input" type="email" value="{{ .Email }}"
+           class="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+    <p id="email-login-note" class="text-xs text-gray-500 dark:text-gray-400 mt-1 {{ if not (or (eq .Auth "email") (eq .Auth "google")) }}hidden{{ end }}">Email address will be used as the login ID.</p>
+  </div>
+
+  <!-- Password (shown for: password) -->
+  <div id="temp-password-section" class="{{ if ne .Auth "password" }}hidden{{ end }}">
+    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Temporary Password</label>
+    <input name="temp_password" id="temp-password-input" type="text"
+           class="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Leave blank to keep existing password. If set, user will be required to change on next login.</p>
+  </div>
+
+  <!-- Status -->
+  <div>
+    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+    <select name="status"
+            class="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            {{ if .IsSelf }}disabled{{ end }}>
+      <option value="active" {{ if eq .Status "active" }}selected{{ end }}>Active</option>
+      <option value="disabled" {{ if eq .Status "disabled" }}selected{{ end }}>Disabled</option>
+    </select>
+    {{ if .IsSelf }}
+      <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">You can't change your own status. Ask another admin to make this change.</p>
+    {{ end }}
+  </div>
+
+  <div class="flex gap-2 pt-2">
+    <button type="submit" class="bg-indigo-600 text-white px-3 py-1 rounded hover:bg-indigo-700 text-sm">Update System User</button>
+    <a href="{{ .BackURL }}" class="px-3 py-1 border dark:border-gray-600 rounded text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</a>
+  </div>
+  </form>
+
+  {{ if not .IsSelf }}
+  <!-- Danger Zone -->
+  <div class="max-w-xl mt-4">
+    <div class="p-4 border border-red-300 dark:border-red-700 rounded bg-red-50 dark:bg-red-900/20">
+      <h3 class="text-sm font-semibold text-red-800 dark:text-red-300 mb-2">Danger Zone</h3>
+      <p class="text-xs text-red-700 dark:text-red-400 mb-3">Permanently delete this system user. This action cannot be undone.</p>
+      <form method="post" action="/system-users/{{ .ID }}/delete">
+        <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+        <input type="hidden" name="return" value="/system-users">
+        <button
+          type="submit"
+          class="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 text-sm"
+          onclick="return confirm('Delete this system user? This action cannot be undone.');"
+        >
+          Delete System User
+        </button>
+      </form>
+    </div>
+  </div>
+  {{ else }}
+  <p class="max-w-xl mt-4 text-xs text-gray-500 dark:text-gray-400 italic">
+    You cannot delete your own account.
+  </p>
+  {{ end }}
+</div>
+</div>
+
+<script>
+(function() {
+  var authSelect = document.getElementById('auth-method-select');
+  if (!authSelect) return;
+
+  var loginIdSection = document.getElementById('login-id-section');
+  var loginIdInput = document.getElementById('login-id-input');
+  var emailOptionalLabel = document.getElementById('email-optional-label');
+  var emailInput = document.getElementById('email-input');
+  var emailLoginNote = document.getElementById('email-login-note');
+  var passwordSection = document.getElementById('temp-password-section');
+  var passwordInput = document.getElementById('temp-password-input');
+
+  // Methods where email IS the login identity (no separate Login ID field)
+  var emailIsLoginMethods = ['email', 'google'];
+
+  function toggleAuthFields() {
+    var method = authSelect.value;
+    var isEmailLoginMethod = emailIsLoginMethods.indexOf(method) !== -1;
+
+    // Login ID: hide for email/google (email becomes login_id)
+    if (loginIdSection && loginIdInput) {
+      if (isEmailLoginMethod) {
+        loginIdSection.classList.add('hidden');
+        loginIdInput.required = false;
+      } else {
+        loginIdSection.classList.remove('hidden');
+        loginIdInput.required = true;
+      }
+    }
+
+    // Email: required for email/google, optional for others
+    if (emailOptionalLabel && emailInput && emailLoginNote) {
+      if (isEmailLoginMethod) {
+        emailOptionalLabel.classList.add('hidden');
+        emailLoginNote.classList.remove('hidden');
+        emailInput.required = true;
+        // Auto-populate email from login_id if it looks like an email and email is empty
+        if (loginIdInput && emailInput.value.trim() === '' && loginIdInput.value.indexOf('@') !== -1) {
+          emailInput.value = loginIdInput.value;
+        }
+      } else {
+        emailOptionalLabel.classList.remove('hidden');
+        emailLoginNote.classList.add('hidden');
+        emailInput.required = false;
+      }
+    }
+
+    // Password field: show only for 'password' auth
+    if (passwordSection && passwordInput) {
+      if (method === 'password') {
+        passwordSection.classList.remove('hidden');
+      } else {
+        passwordSection.classList.add('hidden');
+        passwordInput.value = '';
+      }
+    }
+  }
+
+  authSelect.addEventListener('change', toggleAuthFields);
+  // Initial state check
+  toggleAuthFields();
+})();
+</script>
+{{ end }}

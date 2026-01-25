@@ -1,0 +1,308 @@
+{{/* Reusable UI Components */}}
+
+{{/*
+  Stat Card Component
+  Usage: {{ template "stat_card" (dict "Label" "Total Users" "Value" "1,234" "Delta" "+12%" "DeltaType" "positive" "Icon" "👥") }}
+  DeltaType: "positive" (green), "negative" (red), "neutral" (gray)
+*/}}
+{{ define "stat_card" }}
+<div class="bg-white dark:bg-gray-800 rounded shadow p-4">
+  <div class="flex items-center justify-between">
+    <div class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ .Label }}</div>
+    {{ if .Icon }}<span class="text-lg">{{ .Icon }}</span>{{ end }}
+  </div>
+  <div class="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{{ .Value }}</div>
+  {{ if .Delta }}
+  <div class="mt-1 text-sm {{ if eq .DeltaType "positive" }}text-green-600 dark:text-green-400{{ else if eq .DeltaType "negative" }}text-red-600 dark:text-red-400{{ else }}text-gray-500 dark:text-gray-400{{ end }}">
+    {{ .Delta }}
+  </div>
+  {{ end }}
+  {{ if .Description }}
+  <div class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ .Description }}</div>
+  {{ end }}
+</div>
+{{ end }}
+
+{{/*
+  Filter Builder Component
+  Usage: {{ template "filter_builder" (dict "Action" "/ledger" "Method" "GET" "Target" "#results" "Fields" .FilterFields "Values" .Filter) }}
+  Fields should be a slice of filter field configs
+*/}}
+{{ define "filter_builder" }}
+<form
+  {{ if .Action }}action="{{ .Action }}"{{ end }}
+  method="{{ if .Method }}{{ .Method }}{{ else }}GET{{ end }}"
+  {{ if .Target }}hx-get="{{ .Action }}" hx-target="{{ .Target }}" hx-swap="innerHTML" hx-push-url="true"{{ end }}
+  class="bg-white dark:bg-gray-800 rounded shadow p-3 flex flex-wrap items-center gap-2"
+>
+  {{ range .Fields }}
+  {{ if eq .Type "text" }}
+  <input
+    type="text"
+    name="{{ .Name }}"
+    value="{{ index $.Values .Name }}"
+    placeholder="{{ .Placeholder }}"
+    class="px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+  >
+  {{ else if eq .Type "select" }}
+  <select
+    name="{{ .Name }}"
+    class="px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+  >
+    <option value="">{{ .Placeholder }}</option>
+    {{ $current := index $.Values .Name }}
+    {{ range .Options }}
+    <option value="{{ .Value }}" {{ if eq .Value $current }}selected{{ end }}>{{ .Label }}</option>
+    {{ end }}
+  </select>
+  {{ else if eq .Type "date" }}
+  <div class="flex items-center gap-1">
+    {{ if .Label }}<label class="text-xs text-gray-500 dark:text-gray-400">{{ .Label }}</label>{{ end }}
+    <input
+      type="date"
+      name="{{ .Name }}"
+      value="{{ index $.Values .Name }}"
+      class="px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+    >
+  </div>
+  {{ else if eq .Type "number" }}
+  <input
+    type="number"
+    name="{{ .Name }}"
+    value="{{ index $.Values .Name }}"
+    placeholder="{{ .Placeholder }}"
+    {{ if .Min }}min="{{ .Min }}"{{ end }}
+    {{ if .Max }}max="{{ .Max }}"{{ end }}
+    class="px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 w-24"
+  >
+  {{ end }}
+  {{ end }}
+
+  <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm">Filter</button>
+  {{ if .ClearURL }}
+  <a href="{{ .ClearURL }}" class="px-4 py-2 border dark:border-gray-600 rounded text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">Clear</a>
+  {{ end }}
+</form>
+{{ end }}
+
+{{/*
+  Data Table Component
+  Usage: {{ template "data_table" (dict "Headers" .Headers "Rows" .Rows "EmptyMessage" "No data found") }}
+  Headers: slice of header labels
+  Rows: slice of row data (each row is a slice of cell values or a map)
+*/}}
+{{ define "data_table" }}
+<div class="overflow-auto">
+  <table class="min-w-full text-sm text-left text-gray-700 dark:text-gray-300">
+    <thead class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 uppercase text-xs sticky top-0 z-10">
+      <tr>
+        {{ range .Headers }}
+        <th class="px-4 py-3">{{ . }}</th>
+        {{ end }}
+      </tr>
+    </thead>
+    <tbody>
+      {{ if .Rows }}
+      {{ range .Rows }}
+      <tr class="border-b border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900/50">
+        {{ range . }}
+        <td class="px-4 py-3">{{ . }}</td>
+        {{ end }}
+      </tr>
+      {{ end }}
+      {{ else }}
+      <tr>
+        <td colspan="{{ len .Headers }}" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+          {{ if .EmptyMessage }}{{ .EmptyMessage }}{{ else }}No data found.{{ end }}
+        </td>
+      </tr>
+      {{ end }}
+    </tbody>
+  </table>
+</div>
+{{ end }}
+
+{{/*
+  Pagination Component
+  Usage: {{ template "pagination" (dict "Page" .Page "TotalPages" .TotalPages "TotalCount" .TotalCount "BaseURL" "/ledger" "Target" "#results" "PrevPage" .PrevPage "NextPage" .NextPage) }}
+  Note: PrevPage and NextPage should be pre-computed in the handler
+*/}}
+{{ define "pagination" }}
+<div class="flex items-center justify-between p-3 border-b dark:border-gray-700">
+  <div class="text-gray-600 dark:text-gray-400 text-sm">
+    {{ if .TotalCount }}
+    Showing page {{ .Page }} of {{ .TotalPages }} ({{ .TotalCount }} total)
+    {{ else }}
+    No results found
+    {{ end }}
+  </div>
+  <div class="flex items-center gap-2">
+    {{ if gt .Page 1 }}
+    <a
+      class="inline-flex items-center justify-center h-7 leading-none text-xs px-2 border dark:border-gray-600 rounded text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+      href="{{ .BaseURL }}?page={{ .PrevPage }}"
+      {{ if .Target }}hx-get="{{ .BaseURL }}?page={{ .PrevPage }}" hx-target="{{ .Target }}" hx-swap="innerHTML" hx-push-url="true"{{ end }}
+    >Prev</a>
+    {{ end }}
+    {{ if lt .Page .TotalPages }}
+    <a
+      class="inline-flex items-center justify-center h-7 leading-none text-xs px-2 border dark:border-gray-600 rounded text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+      href="{{ .BaseURL }}?page={{ .NextPage }}"
+      {{ if .Target }}hx-get="{{ .BaseURL }}?page={{ .NextPage }}" hx-target="{{ .Target }}" hx-swap="innerHTML" hx-push-url="true"{{ end }}
+    >Next</a>
+    {{ end }}
+  </div>
+</div>
+{{ end }}
+
+{{/*
+  Export Button Component
+  Usage: {{ template "export_button" (dict "URL" "/ledger/export" "Formats" (slice "csv" "json")) }}
+*/}}
+{{ define "export_button" }}
+<div class="relative inline-block" x-data="{ open: false }">
+  <button
+    @click="open = !open"
+    class="px-3 py-2 border dark:border-gray-600 rounded text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-1"
+  >
+    <span>Export</span>
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+    </svg>
+  </button>
+  <div
+    x-show="open"
+    @click.away="open = false"
+    class="absolute right-0 mt-1 bg-white dark:bg-gray-800 border dark:border-gray-600 rounded shadow-lg z-20"
+  >
+    {{ range .Formats }}
+    <a
+      href="{{ $.URL }}?format={{ . }}"
+      class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+    >{{ . | upper }}</a>
+    {{ end }}
+  </div>
+</div>
+{{ end }}
+
+{{/*
+  Status Badge Component
+  Usage: {{ template "status_badge" (dict "Status" "active" "Class" "bg-green-100 text-green-800") }}
+*/}}
+{{ define "status_badge" }}
+<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium {{ .Class }}">
+  {{ .Status }}
+</span>
+{{ end }}
+
+{{/*
+  Confirm Button Component (with HTMX confirmation)
+  Usage: {{ template "confirm_button" (dict "URL" "/jobs/123/retry" "Method" "POST" "Label" "Retry" "Confirm" "Are you sure?" "Class" "bg-green-600 text-white") }}
+*/}}
+{{ define "confirm_button" }}
+<form
+  hx-{{ if .Method }}{{ .Method | lower }}{{ else }}post{{ end }}="{{ .URL }}"
+  hx-confirm="{{ .Confirm }}"
+  class="inline"
+>
+  {{ if .CSRFToken }}
+  <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+  {{ end }}
+  <button
+    type="submit"
+    class="px-3 py-1 rounded text-sm hover:opacity-80 {{ if .Class }}{{ .Class }}{{ else }}bg-indigo-600 text-white{{ end }}"
+  >{{ .Label }}</button>
+</form>
+{{ end }}
+
+{{/*
+  Empty State Component
+  Usage: {{ template "empty_state" (dict "Title" "No jobs found" "Description" "Jobs will appear here once created" "Icon" "📋") }}
+*/}}
+{{ define "empty_state" }}
+<div class="text-center py-12">
+  {{ if .Icon }}
+  <div class="text-4xl mb-4">{{ .Icon }}</div>
+  {{ end }}
+  <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">{{ .Title }}</h3>
+  {{ if .Description }}
+  <p class="text-gray-500 dark:text-gray-400">{{ .Description }}</p>
+  {{ end }}
+  {{ if .ActionURL }}
+  <a href="{{ .ActionURL }}" class="mt-4 inline-block px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm">
+    {{ if .ActionLabel }}{{ .ActionLabel }}{{ else }}Get Started{{ end }}
+  </a>
+  {{ end }}
+</div>
+{{ end }}
+
+{{/*
+  Loading Spinner Component
+  Usage: {{ template "loading_spinner" (dict "Size" "lg" "Text" "Loading...") }}
+  Size: "sm", "md", "lg"
+*/}}
+{{ define "loading_spinner" }}
+<div class="flex items-center justify-center gap-2">
+  <svg
+    class="animate-spin {{ if eq .Size "sm" }}h-4 w-4{{ else if eq .Size "lg" }}h-8 w-8{{ else }}h-6 w-6{{ end }} text-indigo-600 dark:text-indigo-400"
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+  >
+    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+  </svg>
+  {{ if .Text }}<span class="text-gray-600 dark:text-gray-400 text-sm">{{ .Text }}</span>{{ end }}
+</div>
+{{ end }}
+
+{{/*
+  Alert/Toast Component
+  Usage: {{ template "alert" (dict "Type" "success" "Title" "Success!" "Message" "Your changes have been saved.") }}
+  Type: "success", "error", "warning", "info"
+*/}}
+{{ define "alert" }}
+<div class="rounded-md p-4 {{ if eq .Type "success" }}bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800{{ else if eq .Type "error" }}bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800{{ else if eq .Type "warning" }}bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800{{ else }}bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800{{ end }}">
+  <div class="flex">
+    <div class="flex-shrink-0">
+      {{ if eq .Type "success" }}✓{{ else if eq .Type "error" }}✕{{ else if eq .Type "warning" }}⚠{{ else }}ℹ{{ end }}
+    </div>
+    <div class="ml-3">
+      {{ if .Title }}
+      <h3 class="text-sm font-medium {{ if eq .Type "success" }}text-green-800 dark:text-green-400{{ else if eq .Type "error" }}text-red-800 dark:text-red-400{{ else if eq .Type "warning" }}text-yellow-800 dark:text-yellow-400{{ else }}text-blue-800 dark:text-blue-400{{ end }}">
+        {{ .Title }}
+      </h3>
+      {{ end }}
+      {{ if .Message }}
+      <p class="text-sm {{ if eq .Type "success" }}text-green-700 dark:text-green-300{{ else if eq .Type "error" }}text-red-700 dark:text-red-300{{ else if eq .Type "warning" }}text-yellow-700 dark:text-yellow-300{{ else }}text-blue-700 dark:text-blue-300{{ end }} {{ if .Title }}mt-1{{ end }}">
+        {{ .Message }}
+      </p>
+      {{ end }}
+    </div>
+  </div>
+</div>
+{{ end }}
+
+{{/*
+  Key-Value Display Component
+  Usage: {{ template "key_value" (dict "Label" "Status" "Value" "Active" "Mono" true) }}
+*/}}
+{{ define "key_value" }}
+<div>
+  <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ .Label }}</dt>
+  <dd class="{{ if .Mono }}font-mono{{ end }} text-gray-900 dark:text-gray-100">{{ .Value }}</dd>
+</div>
+{{ end }}
+
+{{/*
+  Card Header Component
+  Usage: {{ template "card_header" (dict "Title" "Recent Activity" "Action" (dict "URL" "/activity" "Label" "View All")) }}
+*/}}
+{{ define "card_header" }}
+<div class="p-4 border-b dark:border-gray-700 flex items-center justify-between">
+  <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ .Title }}</h2>
+  {{ if .Action }}
+  <a href="{{ .Action.URL }}" class="text-sm text-indigo-600 dark:text-indigo-400 hover:underline">{{ .Action.Label }}</a>
+  {{ end }}
+</div>
+{{ end }}

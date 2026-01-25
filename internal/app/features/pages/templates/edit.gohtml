@@ -1,0 +1,166 @@
+{{/* pages/edit - Edit a page */}}
+{{ define "pages/edit" }}
+{{ template "layout" . }}
+{{ end }}
+
+{{ define "content" }}
+<div class="flex flex-col h-full">
+<div class="flex items-center mb-4">
+  <a href="{{ if eq .Slug "about" }}/about{{ else if eq .Slug "contact" }}/contact{{ else if eq .Slug "terms" }}/terms{{ else if eq .Slug "privacy" }}/privacy{{ else }}/{{ end }}"
+     class="text-sm px-3 py-1 border dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 mr-2 no-loader"
+     title="Go back"
+     onclick="return confirm('Discard unsaved changes?');">
+    ← Back
+  </a>
+  <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ if eq .Slug "about" }}ℹ️{{ else if eq .Slug "contact" }}📧{{ else if eq .Slug "terms" }}📜{{ else if eq .Slug "privacy" }}🔒{{ end }} {{ .Title }}</h1>
+</div>
+
+{{ if .Success }}
+  <div class="mb-3 p-2 border border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded">
+    Page saved successfully!
+  </div>
+{{ end }}
+{{ if .Error }}
+  <div class="mb-3 p-2 border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded">
+    {{ .Error }}
+  </div>
+{{ end }}
+
+<form method="post" action="/pages/{{ .Slug }}" class="space-y-4 bg-white dark:bg-gray-800 p-4 rounded shadow flex-1 mb-2 flex flex-col">
+  <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+
+  <div>
+    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Page Title</label>
+    <input name="title" type="text" value="{{ .PageTitle }}" required
+           class="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 p-2 rounded text-sm" />
+    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">The title displayed at the top of the page.</p>
+  </div>
+
+  <div class="flex-1 flex flex-col">
+    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Content</label>
+    <input type="hidden" name="content" id="page_content" value="{{ .Content }}">
+    <div class="tiptap-container flex-1 flex flex-col">
+      <!-- Toolbar -->
+      <div class="tiptap-toolbar" id="editor-toolbar">
+        <button type="button" data-action="bold" title="Bold (Ctrl+B)"><b>B</b></button>
+        <button type="button" data-action="italic" title="Italic (Ctrl+I)"><i>I</i></button>
+        <button type="button" data-action="underline" title="Underline (Ctrl+U)"><u>U</u></button>
+        <button type="button" data-action="strike" title="Strikethrough"><s>S</s></button>
+        <span class="tiptap-toolbar-divider"></span>
+        <button type="button" data-action="heading1" title="Heading 1">H1</button>
+        <button type="button" data-action="heading2" title="Heading 2">H2</button>
+        <button type="button" data-action="heading3" title="Heading 3">H3</button>
+        <button type="button" data-action="paragraph" title="Paragraph">P</button>
+        <span class="tiptap-toolbar-divider"></span>
+        <button type="button" data-action="bulletList" title="Bullet List">&#8226;</button>
+        <button type="button" data-action="orderedList" title="Numbered List">1.</button>
+        <button type="button" data-action="blockquote" title="Quote">"</button>
+        <button type="button" data-action="codeBlock" title="Code Block">&lt;/&gt;</button>
+        <span class="tiptap-toolbar-divider"></span>
+        <button type="button" data-action="link" title="Add Link">&#128279;+</button>
+        <button type="button" data-action="unlink" title="Remove Link">&#128279;&#10005;</button>
+        <span class="tiptap-toolbar-break"></span>
+        <button type="button" data-action="insertTable" title="Insert Table">&#9638;</button>
+        <button type="button" data-action="addColumnBefore" title="Add Column Before">&#8592;|</button>
+        <button type="button" data-action="addColumnAfter" title="Add Column After">|&#8594;</button>
+        <button type="button" data-action="deleteColumn" title="Delete Column">|&#10005;</button>
+        <button type="button" data-action="addRowBefore" title="Add Row Above">&#8593;&#8211;</button>
+        <button type="button" data-action="addRowAfter" title="Add Row Below">&#8595;&#8211;</button>
+        <button type="button" data-action="deleteRow" title="Delete Row">&#8211;&#10005;</button>
+        <button type="button" data-action="deleteTable" title="Delete Table">&#9638;&#10005;</button>
+        <span class="tiptap-toolbar-divider"></span>
+        <button type="button" data-action="undo" title="Undo (Ctrl+Z)">&#8630;</button>
+        <button type="button" data-action="redo" title="Redo (Ctrl+Y)">&#8631;</button>
+      </div>
+      <!-- Editor -->
+      <div id="editor" class="flex-1"></div>
+    </div>
+  </div>
+
+  <div class="flex gap-2 pt-4 border-t dark:border-gray-700">
+    <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700">
+      Save Page
+    </button>
+    <a href="{{ if eq .Slug "about" }}/about{{ else if eq .Slug "contact" }}/contact{{ else if eq .Slug "terms" }}/terms{{ else if eq .Slug "privacy" }}/privacy{{ else }}/{{ end }}"
+       class="px-3 py-1 border rounded text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 dark:border-gray-600 flex items-center no-loader"
+       onclick="return confirm('Discard unsaved changes?');">Cancel</a>
+  </div>
+</form>
+</div>
+
+<script src="/assets/js/tiptap.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const initialContent = document.getElementById('page_content').value || '';
+  const editor = window.TiptapEditor.create('editor', 'page_content', initialContent);
+
+  if (!editor) return;
+
+  // Toolbar button handlers
+  const toolbar = document.getElementById('editor-toolbar');
+  toolbar.addEventListener('click', function(e) {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+
+    const action = btn.dataset.action;
+    switch(action) {
+      case 'bold': editor.chain().focus().toggleBold().run(); break;
+      case 'italic': editor.chain().focus().toggleItalic().run(); break;
+      case 'underline': editor.chain().focus().toggleUnderline().run(); break;
+      case 'strike': editor.chain().focus().toggleStrike().run(); break;
+      case 'heading1': editor.chain().focus().toggleHeading({ level: 1 }).run(); break;
+      case 'heading2': editor.chain().focus().toggleHeading({ level: 2 }).run(); break;
+      case 'heading3': editor.chain().focus().toggleHeading({ level: 3 }).run(); break;
+      case 'paragraph': editor.chain().focus().setParagraph().run(); break;
+      case 'bulletList': editor.chain().focus().toggleBulletList().run(); break;
+      case 'orderedList': editor.chain().focus().toggleOrderedList().run(); break;
+      case 'blockquote': editor.chain().focus().toggleBlockquote().run(); break;
+      case 'codeBlock': editor.chain().focus().toggleCodeBlock().run(); break;
+      case 'link':
+        const url = prompt('Enter URL:');
+        if (url) editor.chain().focus().setLink({ href: url }).run();
+        break;
+      case 'unlink': editor.chain().focus().unsetLink().run(); break;
+      case 'insertTable': editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(); break;
+      case 'addColumnBefore': editor.chain().focus().addColumnBefore().run(); break;
+      case 'addColumnAfter': editor.chain().focus().addColumnAfter().run(); break;
+      case 'deleteColumn': editor.chain().focus().deleteColumn().run(); break;
+      case 'addRowBefore': editor.chain().focus().addRowBefore().run(); break;
+      case 'addRowAfter': editor.chain().focus().addRowAfter().run(); break;
+      case 'deleteRow': editor.chain().focus().deleteRow().run(); break;
+      case 'deleteTable': editor.chain().focus().deleteTable().run(); break;
+      case 'undo': editor.chain().focus().undo().run(); break;
+      case 'redo': editor.chain().focus().redo().run(); break;
+    }
+    updateToolbarState();
+  });
+
+  // Update toolbar button states
+  function updateToolbarState() {
+    toolbar.querySelectorAll('button[data-action]').forEach(btn => {
+      const action = btn.dataset.action;
+      let isActive = false;
+      switch(action) {
+        case 'bold': isActive = editor.isActive('bold'); break;
+        case 'italic': isActive = editor.isActive('italic'); break;
+        case 'underline': isActive = editor.isActive('underline'); break;
+        case 'strike': isActive = editor.isActive('strike'); break;
+        case 'heading1': isActive = editor.isActive('heading', { level: 1 }); break;
+        case 'heading2': isActive = editor.isActive('heading', { level: 2 }); break;
+        case 'heading3': isActive = editor.isActive('heading', { level: 3 }); break;
+        case 'paragraph': isActive = editor.isActive('paragraph'); break;
+        case 'bulletList': isActive = editor.isActive('bulletList'); break;
+        case 'orderedList': isActive = editor.isActive('orderedList'); break;
+        case 'blockquote': isActive = editor.isActive('blockquote'); break;
+        case 'codeBlock': isActive = editor.isActive('codeBlock'); break;
+        case 'link': isActive = editor.isActive('link'); break;
+      }
+      btn.classList.toggle('is-active', isActive);
+    });
+  }
+
+  editor.on('selectionUpdate', updateToolbarState);
+  editor.on('update', updateToolbarState);
+});
+</script>
+{{ end }}

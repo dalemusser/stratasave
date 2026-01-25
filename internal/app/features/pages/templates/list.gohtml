@@ -1,0 +1,25 @@
+{{/* pages/list - List editable pages */}}
+{{ define "pages/list" }}
+{{ template "layout" . }}
+{{ end }}
+
+{{ define "content" }}
+<div class="flex flex-col h-full">
+    <div class="mb-4">
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">📄 Manage Pages</h1>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden flex-1 mb-2">
+        <ul class="divide-y divide-gray-200 dark:divide-gray-600">
+            {{ range .Pages }}
+            <li>
+                <a href="/pages/{{ . }}/edit" class="block px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-700 flex justify-between items-center">
+                    <span>{{ if eq . "about" }}ℹ️ About{{ else if eq . "contact" }}📧 Contact{{ else if eq . "terms" }}📜 Terms of Service{{ else if eq . "privacy" }}🔒 Privacy Policy{{ else }}{{ . }}{{ end }}</span>
+                    <span class="text-indigo-600 dark:text-indigo-400">Edit</span>
+                </a>
+            </li>
+            {{ end }}
+        </ul>
+    </div>
+</div>
+{{ end }}

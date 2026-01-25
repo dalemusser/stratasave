@@ -1,0 +1,214 @@
+{{ define "ledger/detail" }}
+  {{ template "layout" . }}
+{{ end }}
+
+{{ define "content" }}
+<div class="flex flex-col h-full">
+  <div class="mb-4 flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Request Details</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400 font-mono">{{ .Entry.RequestID }}</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <a href="/ledger" class="px-4 py-2 border dark:border-gray-600 rounded text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">Back to Ledger</a>
+      <form hx-post="/ledger/{{ .Entry.ID }}/delete" hx-confirm="Are you sure you want to delete this entry?">
+        <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+        <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm">Delete</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <!-- Request Summary -->
+    <div class="bg-white dark:bg-gray-800 rounded shadow p-4">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Request</h2>
+      <dl class="space-y-2 text-sm">
+        <div class="flex justify-between">
+          <dt class="text-gray-500 dark:text-gray-400">Method</dt>
+          <dd class="font-mono {{ if eq .Entry.Method "GET" }}text-blue-600 dark:text-blue-400{{ else if eq .Entry.Method "POST" }}text-green-600 dark:text-green-400{{ else if eq .Entry.Method "DELETE" }}text-red-600 dark:text-red-400{{ else }}text-gray-700 dark:text-gray-300{{ end }}">{{ .Entry.Method }}</dd>
+        </div>
+        <div class="flex justify-between">
+          <dt class="text-gray-500 dark:text-gray-400">Path</dt>
+          <dd class="font-mono text-gray-700 dark:text-gray-300 truncate max-w-xs" title="{{ .Entry.Path }}">{{ .Entry.Path }}</dd>
+        </div>
+        {{ if .Entry.Query }}
+        <div class="flex justify-between">
+          <dt class="text-gray-500 dark:text-gray-400">Query</dt>
+          <dd class="font-mono text-gray-700 dark:text-gray-300 truncate max-w-xs" title="{{ .Entry.Query }}">{{ .Entry.Query }}</dd>
+        </div>
+        {{ end }}
+        <div class="flex justify-between">
+          <dt class="text-gray-500 dark:text-gray-400">Remote IP</dt>
+          <dd class="font-mono text-gray-700 dark:text-gray-300">{{ .Entry.RemoteIP }}</dd>
+        </div>
+        <div class="flex justify-between">
+          <dt class="text-gray-500 dark:text-gray-400">Content Type</dt>
+          <dd class="font-mono text-gray-700 dark:text-gray-300">{{ or .Entry.RequestContentType "N/A" }}</dd>
+        </div>
+        <div class="flex justify-between">
+          <dt class="text-gray-500 dark:text-gray-400">Body Size</dt>
+          <dd class="font-mono text-gray-700 dark:text-gray-300">{{ .Entry.RequestBodySize }} bytes</dd>
+        </div>
+        {{ if .Entry.RequestBodyHash }}
+        <div class="flex justify-between">
+          <dt class="text-gray-500 dark:text-gray-400">Body Hash</dt>
+          <dd class="font-mono text-gray-700 dark:text-gray-300">{{ .Entry.RequestBodyHash }}</dd>
+        </div>
+        {{ end }}
+      </dl>
+
+      {{ if .Entry.RequestBodyPreview }}
+      <div class="mt-4">
+        <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Body Preview</h3>
+        <pre class="bg-gray-100 dark:bg-gray-700 p-2 rounded text-xs font-mono overflow-x-auto">{{ .Entry.RequestBodyPreview }}</pre>
+      </div>
+      {{ end }}
+    </div>
+
+    <!-- Response Summary -->
+    <div class="bg-white dark:bg-gray-800 rounded shadow p-4">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Response</h2>
+      <dl class="space-y-2 text-sm">
+        <div class="flex justify-between">
+          <dt class="text-gray-500 dark:text-gray-400">Status Code</dt>
+          <dd class="{{ .Entry.StatusClass }} font-mono font-bold text-lg">{{ .Entry.StatusCode }}</dd>
+        </div>
+        <div class="flex justify-between">
+          <dt class="text-gray-500 dark:text-gray-400">Response Size</dt>
+          <dd class="font-mono text-gray-700 dark:text-gray-300">{{ .Entry.ResponseSize }} bytes</dd>
+        </div>
+        {{ if .Entry.ErrorClass }}
+        <div class="flex justify-between">
+          <dt class="text-gray-500 dark:text-gray-400">Error Class</dt>
+          <dd class="text-red-600 dark:text-red-400">{{ .Entry.ErrorClass }}</dd>
+        </div>
+        {{ end }}
+        {{ if .Entry.ErrorMessage }}
+        <div class="flex justify-between">
+          <dt class="text-gray-500 dark:text-gray-400">Error Message</dt>
+          <dd class="text-red-600 dark:text-red-400 truncate max-w-xs" title="{{ .Entry.ErrorMessage }}">{{ .Entry.ErrorMessage }}</dd>
+        </div>
+        {{ end }}
+      </dl>
+    </div>
+
+    <!-- Actor Information -->
+    <div class="bg-white dark:bg-gray-800 rounded shadow p-4">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Actor</h2>
+      <dl class="space-y-2 text-sm">
+        <div class="flex justify-between">
+          <dt class="text-gray-500 dark:text-gray-400">Type</dt>
+          <dd class="text-gray-700 dark:text-gray-300">
+            <span class="inline-flex items-center px-2 py-1 rounded text-xs
+                         {{ if eq .Entry.ActorType "api_key" }}bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-400
+                         {{ else if eq .Entry.ActorType "session" }}bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-400
+                         {{ else }}bg-gray-100 text-gray-700 dark:bg-gray-600 dark:text-gray-300{{ end }}">
+              {{ .Entry.ActorType }}
+            </span>
+          </dd>
+        </div>
+        {{ if .Entry.ActorID }}
+        <div class="flex justify-between">
+          <dt class="text-gray-500 dark:text-gray-400">ID</dt>
+          <dd class="font-mono text-gray-700 dark:text-gray-300">{{ .Entry.ActorID }}</dd>
+        </div>
+        {{ end }}
+        {{ if .Entry.ActorName }}
+        <div class="flex justify-between">
+          <dt class="text-gray-500 dark:text-gray-400">Name</dt>
+          <dd class="text-gray-700 dark:text-gray-300">{{ .Entry.ActorName }}</dd>
+        </div>
+        {{ end }}
+      </dl>
+    </div>
+
+    <!-- Timing Information -->
+    <div class="bg-white dark:bg-gray-800 rounded shadow p-4">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Timing</h2>
+      <dl class="space-y-2 text-sm">
+        <div class="flex justify-between">
+          <dt class="text-gray-500 dark:text-gray-400">Started At</dt>
+          <dd class="font-mono text-gray-700 dark:text-gray-300">{{ .Entry.StartedAt }}</dd>
+        </div>
+        <div class="flex justify-between">
+          <dt class="text-gray-500 dark:text-gray-400">Completed At</dt>
+          <dd class="font-mono text-gray-700 dark:text-gray-300">{{ .Entry.CompletedAt }}</dd>
+        </div>
+        <div class="flex justify-between">
+          <dt class="text-gray-500 dark:text-gray-400">Total Duration</dt>
+          <dd class="font-mono font-bold text-gray-700 dark:text-gray-300">{{ .Entry.Duration }}</dd>
+        </div>
+        {{ if gt .Entry.DecodeMs 0 }}
+        <div class="flex justify-between">
+          <dt class="text-gray-500 dark:text-gray-400">Decode</dt>
+          <dd class="font-mono text-gray-700 dark:text-gray-300">{{ printf "%.2f" .Entry.DecodeMs }}ms</dd>
+        </div>
+        {{ end }}
+        {{ if gt .Entry.ValidateMs 0 }}
+        <div class="flex justify-between">
+          <dt class="text-gray-500 dark:text-gray-400">Validate</dt>
+          <dd class="font-mono text-gray-700 dark:text-gray-300">{{ printf "%.2f" .Entry.ValidateMs }}ms</dd>
+        </div>
+        {{ end }}
+        {{ if gt .Entry.DBQueryMs 0 }}
+        <div class="flex justify-between">
+          <dt class="text-gray-500 dark:text-gray-400">Database</dt>
+          <dd class="font-mono text-gray-700 dark:text-gray-300">{{ printf "%.2f" .Entry.DBQueryMs }}ms</dd>
+        </div>
+        {{ end }}
+        {{ if gt .Entry.EncodeMs 0 }}
+        <div class="flex justify-between">
+          <dt class="text-gray-500 dark:text-gray-400">Encode</dt>
+          <dd class="font-mono text-gray-700 dark:text-gray-300">{{ printf "%.2f" .Entry.EncodeMs }}ms</dd>
+        </div>
+        {{ end }}
+      </dl>
+    </div>
+  </div>
+
+  <!-- Headers -->
+  {{ if .Entry.Headers }}
+  <div class="mt-4 bg-white dark:bg-gray-800 rounded shadow p-4">
+    <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Request Headers</h2>
+    <dl class="grid grid-cols-2 gap-2 text-sm">
+      {{ range $key, $value := .Entry.Headers }}
+      <dt class="text-gray-500 dark:text-gray-400 font-mono">{{ $key }}</dt>
+      <dd class="text-gray-700 dark:text-gray-300 font-mono truncate" title="{{ $value }}">{{ $value }}</dd>
+      {{ end }}
+    </dl>
+  </div>
+  {{ end }}
+
+  <!-- Metadata -->
+  {{ if .Entry.Metadata }}
+  <div class="mt-4 bg-white dark:bg-gray-800 rounded shadow p-4">
+    <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Metadata</h2>
+    <pre class="bg-gray-100 dark:bg-gray-700 p-2 rounded text-xs font-mono overflow-x-auto">{{ range $key, $value := .Entry.Metadata }}{{ $key }}: {{ $value }}
+{{ end }}</pre>
+  </div>
+  {{ end }}
+
+  <!-- Request IDs -->
+  <div class="mt-4 bg-white dark:bg-gray-800 rounded shadow p-4">
+    <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Request IDs</h2>
+    <dl class="space-y-2 text-sm">
+      <div class="flex justify-between">
+        <dt class="text-gray-500 dark:text-gray-400">Request ID</dt>
+        <dd class="font-mono text-gray-700 dark:text-gray-300">{{ .Entry.RequestID }}</dd>
+      </div>
+      {{ if .Entry.TraceID }}
+      <div class="flex justify-between">
+        <dt class="text-gray-500 dark:text-gray-400">Trace ID</dt>
+        <dd class="font-mono text-gray-700 dark:text-gray-300">{{ .Entry.TraceID }}</dd>
+      </div>
+      {{ end }}
+      {{ if .Entry.ClientRequestID }}
+      <div class="flex justify-between">
+        <dt class="text-gray-500 dark:text-gray-400">Client Request ID</dt>
+        <dd class="font-mono text-gray-700 dark:text-gray-300">{{ .Entry.ClientRequestID }}</dd>
+      </div>
+      {{ end }}
+    </dl>
+  </div>
+</div>
+{{ end }}

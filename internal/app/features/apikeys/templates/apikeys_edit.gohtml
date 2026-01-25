@@ -1,0 +1,112 @@
+{{ define "apikeys/edit" }}
+  {{ template "layout" . }}
+{{ end }}
+
+{{ define "content" }}
+<div class="flex flex-col h-full">
+  <div class="mb-4 flex items-center">
+    <a href="/api-keys/{{ .ID }}"
+       class="text-sm px-3 py-1 border dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 mr-2 no-loader"
+       title="Go back">
+      ← Back
+    </a>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">✏️ Edit API Key</h1>
+  </div>
+
+  <div class="p-4 bg-white dark:bg-gray-800 rounded shadow text-gray-700 dark:text-gray-300 text-sm flex-1 mb-4">
+    {{ if .Error }}
+    <div class="mb-4 p-2 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded max-w-xl">
+      {{ .Error }}
+    </div>
+    {{ end }}
+
+    <form method="POST" action="/api-keys/{{ .ID }}/edit" class="space-y-3 max-w-xl">
+      <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+
+      <div>
+        <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name *</label>
+        <input
+          type="text"
+          id="name"
+          name="name"
+          value="{{ .Name }}"
+          required
+          placeholder="e.g., Production API Key"
+          class="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 p-2 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        >
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+        <div class="py-2">
+          {{ if .IsActive }}
+          <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-400">Active</span>
+          {{ else }}
+          <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-400">Revoked</span>
+          {{ end }}
+        </div>
+      </div>
+
+      <div>
+        <label for="description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+        <textarea
+          id="description"
+          name="description"
+          rows="3"
+          placeholder="Optional: Describe what this key is used for..."
+          class="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 p-2 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        >{{ .Description }}</textarea>
+      </div>
+
+      <div class="flex gap-2 pt-2">
+        <button type="submit" class="bg-indigo-600 text-white px-3 py-1 rounded hover:bg-indigo-700 text-sm">Save Changes</button>
+        <a href="/api-keys/{{ .ID }}" class="px-3 py-1 border dark:border-gray-600 rounded text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</a>
+      </div>
+    </form>
+
+    <!-- Info note -->
+    <div class="max-w-xl mt-4 p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded">
+      <h3 class="text-sm font-medium text-blue-800 dark:text-blue-300 mb-1">Note</h3>
+      <p class="text-sm text-blue-700 dark:text-blue-400">You cannot change the API key value itself. If you need a new key, revoke this one and create a new API key.</p>
+    </div>
+
+    <!-- Revoke section (amber, only if active) -->
+    {{ if .IsActive }}
+    <div class="max-w-xl mt-4">
+      <div class="p-4 border border-amber-300 dark:border-amber-700 rounded bg-amber-50 dark:bg-amber-950">
+        <h3 class="text-sm font-semibold text-amber-800 dark:text-amber-300 mb-2">Revoke Key</h3>
+        <p class="text-xs text-amber-700 dark:text-amber-400 mb-3">Revoking disables the key but keeps its history. This cannot be undone.</p>
+        <form method="post" action="/api-keys/{{ .ID }}/revoke">
+          <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+          <button
+            type="submit"
+            class="bg-amber-600 text-white px-3 py-1 rounded hover:bg-amber-700 text-sm"
+            onclick="return confirm('Are you sure you want to revoke this API key? This cannot be undone.');"
+          >
+            Revoke Key
+          </button>
+        </form>
+      </div>
+    </div>
+    {{ end }}
+
+    <!-- Danger Zone -->
+    <div class="max-w-xl mt-4">
+      <div class="p-4 border border-red-300 dark:border-red-700 rounded bg-red-50 dark:bg-red-900/20">
+        <h3 class="text-sm font-semibold text-red-800 dark:text-red-300 mb-2">Danger Zone</h3>
+        <p class="text-xs text-red-700 dark:text-red-400 mb-3">Permanently delete this API key and all its history. This action cannot be undone.</p>
+        <form method="post" action="/api-keys/{{ .ID }}/delete">
+          <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+          <button
+            type="submit"
+            class="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 text-sm"
+            onclick="return confirm('Are you sure you want to permanently delete this API key? This action cannot be undone.');"
+          >
+            Delete Key
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{{ end }}

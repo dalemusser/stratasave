@@ -1,0 +1,137 @@
+{{ define "apikeys/detail" }}
+  {{ template "layout" . }}
+{{ end }}
+
+{{ define "content" }}
+<div class="flex flex-col h-full">
+  <div class="mb-4 flex items-center">
+    <a href="/api-keys"
+       class="text-sm px-3 py-1 border dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 mr-2 no-loader"
+       title="Go back">
+      ← Back
+    </a>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">🔑 {{ .Key.Name }}</h1>
+  </div>
+
+  <div class="p-4 bg-white dark:bg-gray-800 rounded shadow text-gray-700 dark:text-gray-300 text-sm flex-1 mb-4">
+    <!-- Status Banner -->
+    {{ if not .Key.IsActive }}
+    <div class="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded max-w-xl">
+      <div class="flex items-center gap-2">
+        <svg class="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <span class="text-red-700 dark:text-red-400 font-medium">This API key has been revoked</span>
+      </div>
+      {{ if .Key.RevokedAt }}
+      <p class="text-sm text-red-600 dark:text-red-400 mt-1">Revoked on {{ .Key.RevokedAt }}</p>
+      {{ end }}
+    </div>
+    {{ end }}
+
+    <div class="space-y-4 max-w-xl">
+      <!-- Key Details -->
+      <div>
+        <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3">Key Details</h2>
+        <div class="space-y-3">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name</label>
+            <input type="text" value="{{ .Key.Name }}" readonly
+                   class="w-full border dark:border-gray-600 p-2 rounded bg-gray-50 dark:bg-gray-700 dark:text-gray-100 text-sm" />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+            <div class="py-2">
+              {{ if .Key.IsActive }}
+              <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-400">Active</span>
+              {{ else }}
+              <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-400">Revoked</span>
+              {{ end }}
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Key Prefix</label>
+            <input type="text" value="{{ .Key.KeyPrefix }}..." readonly
+                   class="w-full border dark:border-gray-600 p-2 rounded bg-gray-50 dark:bg-gray-700 dark:text-gray-100 text-sm font-mono" />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Usage Count</label>
+            <input type="text" value="{{ .Key.UsageCount }}" readonly
+                   class="w-full border dark:border-gray-600 p-2 rounded bg-gray-50 dark:bg-gray-700 dark:text-gray-100 text-sm font-mono" />
+          </div>
+
+          {{ if .Key.Description }}
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+            <textarea readonly rows="2"
+                      class="w-full border dark:border-gray-600 p-2 rounded bg-gray-50 dark:bg-gray-700 dark:text-gray-100 text-sm">{{ .Key.Description }}</textarea>
+          </div>
+          {{ end }}
+        </div>
+      </div>
+
+      <!-- Activity -->
+      <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
+        <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3">Activity</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Created</label>
+            <input type="text" value="{{ .Key.CreatedAt }}" readonly
+                   class="w-full border dark:border-gray-600 p-2 rounded bg-gray-50 dark:bg-gray-700 dark:text-gray-100 text-sm" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Last Updated</label>
+            <input type="text" value="{{ .Key.UpdatedAt }}" readonly
+                   class="w-full border dark:border-gray-600 p-2 rounded bg-gray-50 dark:bg-gray-700 dark:text-gray-100 text-sm" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Last Used</label>
+            <input type="text" value="{{ or .Key.LastUsedAt "Never" }}" readonly
+                   class="w-full border dark:border-gray-600 p-2 rounded bg-gray-50 dark:bg-gray-700 dark:text-gray-100 text-sm" />
+          </div>
+          {{ if .Key.RevokedAt }}
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Revoked</label>
+            <input type="text" value="{{ .Key.RevokedAt }}" readonly
+                   class="w-full border dark:border-gray-600 p-2 rounded bg-gray-50 dark:bg-gray-700 dark:text-gray-100 text-sm text-red-600 dark:text-red-400" />
+          </div>
+          {{ end }}
+        </div>
+      </div>
+
+      <!-- Permissions -->
+      <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
+        <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3">Permissions</h2>
+        {{ if .Key.Scopes }}
+        <div class="space-y-2">
+          {{ range .Key.Scopes }}
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="inline-flex items-center px-2 py-1 rounded text-xs bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-400 font-mono">{{ .Resource }}</span>
+            <span class="text-gray-500 dark:text-gray-400">→</span>
+            {{ range .Actions }}
+            <span class="inline-flex items-center px-2 py-1 rounded text-xs bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">{{ . }}</span>
+            {{ end }}
+          </div>
+          {{ end }}
+        </div>
+        {{ else }}
+        <p class="text-gray-500 dark:text-gray-400">Full access (no scope restrictions)</p>
+        {{ end }}
+      </div>
+
+      <!-- Edit button at bottom -->
+      {{ if .Key.IsActive }}
+      <div class="pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
+        <a href="/api-keys/{{ .Key.ID }}/edit"
+           class="px-3 py-1 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700">
+          Edit Key
+        </a>
+      </div>
+      {{ end }}
+    </div>
+  </div>
+</div>
+{{ end }}

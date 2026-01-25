@@ -27,6 +27,19 @@ go.work.sum
 # env file
 .env
 
+# Uploaded files
+uploads/
+
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# Tailwind CSS standalone CLI binary
+tailwindcss
+
+# Build output
+bin/
+
+# Compiled binary (in case of direct go build without -o flag)
+/strataforge
+/strata

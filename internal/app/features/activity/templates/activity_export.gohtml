@@ -1,0 +1,160 @@
+{{ define "activity_export" }}
+  {{ template "layout" . }}
+{{ end }}
+
+{{ define "content" }}
+<div class="flex items-center gap-3 mb-4">
+  <a href="/activity" class="text-sm px-3 py-1 border dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700">
+    &larr; Dashboard
+  </a>
+  <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Data Export</h1>
+</div>
+
+<!-- Filters -->
+<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 mb-6">
+  <form method="get" action="/activity/export" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <!-- Start Date -->
+    <div>
+      <label class="block text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Start Date</label>
+      <input type="date" name="start" value="{{ .StartDate }}" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm">
+    </div>
+
+    <!-- End Date -->
+    <div>
+      <label class="block text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">End Date</label>
+      <input type="date" name="end" value="{{ .EndDate }}" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm">
+    </div>
+
+    <!-- Apply Button -->
+    <div class="flex items-end">
+      <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm">
+        Apply Filters
+      </button>
+    </div>
+  </form>
+</div>
+
+<!-- Aggregated Stats -->
+<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+  <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+    <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Total Sessions</p>
+    <p class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ .TotalSessions }}</p>
+  </div>
+  <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+    <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Unique Users</p>
+    <p class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ .TotalUsers }}</p>
+  </div>
+  <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+    <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Total Time</p>
+    <p class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ .TotalDurationStr }}</p>
+  </div>
+  <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+    <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Avg Session</p>
+    <p class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ .AvgSessionMins }} min</p>
+  </div>
+  <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+    <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Peak Hour</p>
+    <p class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ .PeakHour }}</p>
+  </div>
+  <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+    <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Most Active Day</p>
+    <p class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ .MostActiveDay }}</p>
+  </div>
+</div>
+
+<!-- Export Buttons -->
+<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+  <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Download Data</h3>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-- Sessions Export -->
+    <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+      <h4 class="font-medium text-gray-900 dark:text-gray-100 mb-2">Sessions</h4>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+        Login/logout records with timestamps, duration, and IP addresses.
+      </p>
+      <div class="flex gap-2">
+        <a href="/activity/export/sessions.csv?start={{ .StartDate }}&end={{ .EndDate }}"
+           class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm">
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+          </svg>
+          CSV
+        </a>
+        <a href="/activity/export/sessions.json?start={{ .StartDate }}&end={{ .EndDate }}"
+           class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+          </svg>
+          JSON
+        </a>
+      </div>
+    </div>
+
+    <!-- Activity Events Export -->
+    <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+      <h4 class="font-medium text-gray-900 dark:text-gray-100 mb-2">Activity Events</h4>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+        Page view events and activity logs.
+      </p>
+      <div class="flex gap-2">
+        <a href="/activity/export/events.csv?start={{ .StartDate }}&end={{ .EndDate }}"
+           class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm">
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+          </svg>
+          CSV
+        </a>
+        <a href="/activity/export/events.json?start={{ .StartDate }}&end={{ .EndDate }}"
+           class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+          </svg>
+          JSON
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Data Dictionary -->
+<div class="mt-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+  <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Data Dictionary</h3>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-- Sessions Fields -->
+    <div>
+      <h4 class="font-medium text-gray-900 dark:text-gray-100 mb-2">Sessions Export Fields</h4>
+      <table class="w-full text-sm">
+        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+          <tr><td class="py-1 text-gray-500 dark:text-gray-400">user_id</td><td class="py-1 text-gray-700 dark:text-gray-300">Unique user identifier</td></tr>
+          <tr><td class="py-1 text-gray-500 dark:text-gray-400">user_name</td><td class="py-1 text-gray-700 dark:text-gray-300">User's full name</td></tr>
+          <tr><td class="py-1 text-gray-500 dark:text-gray-400">email</td><td class="py-1 text-gray-700 dark:text-gray-300">User's email address</td></tr>
+          <tr><td class="py-1 text-gray-500 dark:text-gray-400">role</td><td class="py-1 text-gray-700 dark:text-gray-300">User's role</td></tr>
+          <tr><td class="py-1 text-gray-500 dark:text-gray-400">login_at</td><td class="py-1 text-gray-700 dark:text-gray-300">Login timestamp (ISO 8601)</td></tr>
+          <tr><td class="py-1 text-gray-500 dark:text-gray-400">logout_at</td><td class="py-1 text-gray-700 dark:text-gray-300">Logout timestamp (if ended)</td></tr>
+          <tr><td class="py-1 text-gray-500 dark:text-gray-400">end_reason</td><td class="py-1 text-gray-700 dark:text-gray-300">logout, inactive, or expired</td></tr>
+          <tr><td class="py-1 text-gray-500 dark:text-gray-400">duration_secs</td><td class="py-1 text-gray-700 dark:text-gray-300">Session duration in seconds</td></tr>
+          <tr><td class="py-1 text-gray-500 dark:text-gray-400">ip</td><td class="py-1 text-gray-700 dark:text-gray-300">Client IP address</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Events Fields -->
+    <div>
+      <h4 class="font-medium text-gray-900 dark:text-gray-100 mb-2">Activity Events Fields</h4>
+      <table class="w-full text-sm">
+        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+          <tr><td class="py-1 text-gray-500 dark:text-gray-400">user_id</td><td class="py-1 text-gray-700 dark:text-gray-300">Unique user identifier</td></tr>
+          <tr><td class="py-1 text-gray-500 dark:text-gray-400">user_name</td><td class="py-1 text-gray-700 dark:text-gray-300">User's full name</td></tr>
+          <tr><td class="py-1 text-gray-500 dark:text-gray-400">session_id</td><td class="py-1 text-gray-700 dark:text-gray-300">Associated session ID</td></tr>
+          <tr><td class="py-1 text-gray-500 dark:text-gray-400">timestamp</td><td class="py-1 text-gray-700 dark:text-gray-300">Event timestamp (ISO 8601)</td></tr>
+          <tr><td class="py-1 text-gray-500 dark:text-gray-400">event_type</td><td class="py-1 text-gray-700 dark:text-gray-300">page_view or other event types</td></tr>
+          <tr><td class="py-1 text-gray-500 dark:text-gray-400">page_path</td><td class="py-1 text-gray-700 dark:text-gray-300">Path of the viewed page</td></tr>
+          <tr><td class="py-1 text-gray-500 dark:text-gray-400">details</td><td class="py-1 text-gray-700 dark:text-gray-300">JSON object with additional data</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{{ end }}

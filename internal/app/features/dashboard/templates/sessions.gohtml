@@ -1,0 +1,92 @@
+{{/* dashboard/sessions - Active Sessions */}}
+{{ define "dashboard/sessions" }}
+{{ template "layout" . }}
+{{ end }}
+
+{{ define "content" }}
+<div class="flex flex-col h-full">
+  <div class="mb-4 flex items-center justify-between">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Active Sessions</h1>
+    <div class="flex items-center gap-2">
+      <button id="refresh-btn"
+              type="button"
+              class="text-sm px-2 py-1 border dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+              title="Refresh now">
+        Refresh
+      </button>
+      <span id="countdown" class="text-xs text-gray-500 dark:text-gray-400 w-8 text-center">30s</span>
+    </div>
+  </div>
+
+  <div class="p-4 bg-white dark:bg-gray-800 rounded shadow flex-1 mb-4">
+    <div id="sessions-table">
+      {{ template "dashboard/sessions_table" . }}
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  var scrollPos = 0;
+  var scrollContainer = null;
+  var countdown = 30;
+  var countdownEl = document.getElementById('countdown');
+  var refreshBtn = document.getElementById('refresh-btn');
+  var countdownInterval = null;
+
+  // Update countdown display
+  function updateCountdown() {
+    if (countdownEl) {
+      countdownEl.textContent = countdown + 's';
+    }
+  }
+
+  // Start countdown timer
+  function startCountdown() {
+    countdown = 30;
+    updateCountdown();
+    if (countdownInterval) clearInterval(countdownInterval);
+    countdownInterval = setInterval(function() {
+      countdown--;
+      if (countdown < 0) countdown = 30;
+      updateCountdown();
+    }, 1000);
+  }
+
+  // Manual refresh - trigger HTMX to reload the table
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', function() {
+      htmx.ajax('GET', '/dashboard/sessions/table', {target: '#sessions-table', swap: 'innerHTML'});
+      countdown = 30;
+      updateCountdown();
+    });
+  }
+
+  // Before HTMX swaps content, save scroll position
+  document.body.addEventListener('htmx:beforeSwap', function(evt) {
+    if (evt.detail.target && evt.detail.target.id === 'sessions-table') {
+      scrollContainer = document.querySelector('#sessions-table .overflow-auto');
+      if (scrollContainer) {
+        scrollPos = scrollContainer.scrollTop;
+      }
+    }
+  });
+
+  // After HTMX swaps content, restore scroll position and reset countdown
+  document.body.addEventListener('htmx:afterSwap', function(evt) {
+    if (evt.detail.target && evt.detail.target.id === 'sessions-table') {
+      scrollContainer = document.querySelector('#sessions-table .overflow-auto');
+      if (scrollContainer && scrollPos > 0) {
+        scrollContainer.scrollTop = scrollPos;
+      }
+      // Reset countdown after refresh
+      countdown = 30;
+      updateCountdown();
+    }
+  });
+
+  // Start countdown on page load
+  startCountdown();
+})();
+</script>
+{{ end }}

@@ -1,0 +1,103 @@
+{{ define "announcements/edit" }}
+  {{ template "layout" . }}
+{{ end }}
+
+{{ define "content" }}
+<div class="flex flex-col h-full">
+<div class="mb-4 flex items-center">
+  <a href="/announcements"
+     class="text-sm px-3 py-1 border dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 mr-2 no-loader"
+     title="Go back">
+    ← Back
+  </a>
+  <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">📢 Edit Announcement</h1>
+</div>
+
+<div class="p-4 bg-white dark:bg-gray-800 rounded shadow text-gray-700 dark:text-gray-300 text-sm flex-1 mb-2">
+  {{ if .Error }}
+    <div class="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 p-2 rounded mb-4 max-w-lg">
+      {{ .Error }}
+    </div>
+  {{ end }}
+
+  <form method="POST" action="/announcements/{{ .ID }}" class="space-y-4 max-w-lg">
+    <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+    <div>
+      <label for="title" class="block font-semibold mb-1">Title</label>
+      <input type="text" id="title" name="title" value="{{ .AnnTitle }}" required
+             class="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 dark:bg-gray-700 dark:text-gray-100" />
+    </div>
+
+    <div>
+      <label for="content" class="block font-semibold mb-1">Content</label>
+      <textarea id="content" name="content" rows="3"
+                class="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 dark:bg-gray-700 dark:text-gray-100">{{ .Content }}</textarea>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Optional additional details.</p>
+    </div>
+
+    <div>
+      <label for="type" class="block font-semibold mb-1">Type</label>
+      <select id="type" name="type"
+              class="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 dark:bg-gray-700 dark:text-gray-100">
+        <option value="info" {{ if eq .Type "info" }}selected{{ end }}>Info (Blue)</option>
+        <option value="warning" {{ if eq .Type "warning" }}selected{{ end }}>Warning (Yellow)</option>
+        <option value="critical" {{ if eq .Type "critical" }}selected{{ end }}>Critical (Red)</option>
+      </select>
+    </div>
+
+    <div class="flex items-center gap-4">
+      <label class="flex items-center gap-2 cursor-pointer">
+        <input type="checkbox" name="dismissible" {{ if .Dismissible }}checked{{ end }}
+               class="text-indigo-600" />
+        <span>Dismissible</span>
+      </label>
+      <label class="flex items-center gap-2 cursor-pointer">
+        <input type="checkbox" name="active" {{ if .Active }}checked{{ end }}
+               class="text-indigo-600" />
+        <span>Active</span>
+      </label>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label for="starts_at" class="block font-semibold mb-1">Starts At (optional)</label>
+        <input type="datetime-local" id="starts_at" name="starts_at" value="{{ .StartsAt }}"
+               class="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 dark:bg-gray-700 dark:text-gray-100" />
+      </div>
+      <div>
+        <label for="ends_at" class="block font-semibold mb-1">Ends At (optional)</label>
+        <input type="datetime-local" id="ends_at" name="ends_at" value="{{ .EndsAt }}"
+               class="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 dark:bg-gray-700 dark:text-gray-100" />
+      </div>
+    </div>
+
+    <div class="flex gap-2 pt-2">
+      <button type="submit" class="bg-indigo-600 text-white px-4 py-1 rounded hover:bg-indigo-700">
+        Save Changes
+      </button>
+      <a href="/announcements" class="px-3 py-1 border dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700">
+        Cancel
+      </a>
+    </div>
+  </form>
+
+  <!-- Danger Zone -->
+  <div class="max-w-lg mt-6">
+    <div class="p-4 border border-red-300 dark:border-red-700 rounded bg-red-50 dark:bg-red-900/20">
+      <h3 class="text-sm font-semibold text-red-800 dark:text-red-300 mb-2">Danger Zone</h3>
+      <p class="text-xs text-red-700 dark:text-red-400 mb-3">Permanently delete this announcement. This action cannot be undone.</p>
+      <form method="POST" action="/announcements/{{ .ID }}/delete">
+        <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+        <button
+          type="submit"
+          class="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 text-sm"
+          onclick="return confirm('Delete this announcement? This action cannot be undone.');"
+        >
+          Delete Announcement
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+</div>
+{{ end }}

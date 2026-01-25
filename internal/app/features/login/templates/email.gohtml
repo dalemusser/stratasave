@@ -1,0 +1,33 @@
+{{/* login/email - Email login */}}
+{{ define "login/email" }}
+{{ template "layout" . }}
+{{ end }}
+
+{{ define "content" }}
+<div class="flex flex-col h-full">
+<div class="mb-4">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">🔐 Email Login</h1>
+</div>
+
+<div class="p-4 bg-white dark:bg-gray-800 rounded shadow text-gray-700 dark:text-gray-300 text-sm flex-1 mb-2">
+    <p class="text-gray-600 dark:text-gray-400 mb-6 max-w-md">We'll send you a code to verify your email</p>
+
+    {{ if .Error }}
+    <div class="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 p-3 rounded mb-4 max-w-md">{{ .Error }}</div>
+    {{ end }}
+
+    <form method="POST" class="space-y-4 max-w-md">
+        <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+        <div>
+            <label for="email" class="block text-sm font-medium mb-1">Email</label>
+            <input type="email" id="email" name="email" value="{{ .Email }}" required
+                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-gray-100"
+                autofocus>
+        </div>
+        <button type="submit" class="w-full bg-indigo-600 text-white py-3 rounded hover:bg-indigo-700">Send Code</button>
+    </form>
+
+    <p class="mt-4 max-w-md"><a href="/login" class="text-indigo-600 dark:text-indigo-400 hover:underline">Back to login options</a></p>
+</div>
+</div>
+{{ end }}

@@ -1,0 +1,386 @@
+/* ============================================
+   TipTap Rich Text Editor Styles
+   ============================================ */
+
+/* Editor Container */
+.tiptap-container {
+  background-color: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+}
+
+/* Toolbar */
+.tiptap-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  background-color: #f9fafb;
+  border-bottom: 1px solid #d1d5db;
+}
+
+.tiptap-toolbar button {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+  background-color: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.tiptap-toolbar button:hover {
+  background-color: #e5e7eb;
+}
+
+.tiptap-toolbar button.is-active {
+  background-color: #4f46e5;
+  border-color: #4f46e5;
+  color: #fff;
+}
+
+.tiptap-toolbar button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tiptap-toolbar-divider {
+  width: 1px;
+  margin: 0 0.25rem;
+  background-color: #d1d5db;
+}
+
+.tiptap-toolbar-break {
+  flex-basis: 100%;
+  height: 0;
+}
+
+/* Editor Content Area */
+.tiptap-editor-content {
+  min-height: 200px;
+  padding: 0.75rem;
+  outline: none;
+}
+
+.tiptap-editor-content:focus {
+  outline: none;
+}
+
+/* Typography in Editor */
+.tiptap-editor-content h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0.5rem 0;
+}
+
+.tiptap-editor-content h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0.5rem 0;
+}
+
+.tiptap-editor-content h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0.5rem 0;
+}
+
+.tiptap-editor-content p {
+  margin: 0.5rem 0;
+}
+
+.tiptap-editor-content ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+
+.tiptap-editor-content ol {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+
+.tiptap-editor-content li {
+  margin: 0.25rem 0;
+}
+
+.tiptap-editor-content blockquote {
+  border-left: 3px solid #d1d5db;
+  padding-left: 1rem;
+  margin: 0.5rem 0;
+  color: #6b7280;
+}
+
+.tiptap-editor-content code {
+  background-color: #f3f4f6;
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+  font-family: monospace;
+}
+
+.tiptap-editor-content pre {
+  background-color: #1f2937;
+  color: #f9fafb;
+  padding: 0.75rem;
+  border-radius: 0.375rem;
+  overflow-x: auto;
+}
+
+.tiptap-editor-content pre code {
+  background-color: transparent;
+  padding: 0;
+}
+
+.tiptap-editor-content hr {
+  border: none;
+  border-top: 1px solid #d1d5db;
+  margin: 1rem 0;
+}
+
+/* Tables in Editor */
+.tiptap-editor-content table {
+  border-collapse: collapse;
+  margin: 0.5rem 0;
+  width: 100%;
+}
+
+.tiptap-editor-content th,
+.tiptap-editor-content td {
+  border: 1px solid #d1d5db;
+  padding: 0.5rem;
+  text-align: left;
+}
+
+.tiptap-editor-content th {
+  background-color: #f3f4f6;
+  font-weight: 600;
+}
+
+.tiptap-editor-content .selectedCell {
+  background-color: #eef2ff;
+}
+
+/* Links in Editor */
+.tiptap-editor-content a {
+  color: #4f46e5;
+  text-decoration: underline;
+}
+
+/* Placeholder */
+.tiptap-editor-content p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #9ca3af;
+  pointer-events: none;
+  height: 0;
+}
+
+/* ============================================
+   TipTap Content Display Styles (for viewing)
+   ============================================ */
+
+.tiptap-content {
+  font-size: 0.875rem; /* text-sm */
+  line-height: 1.6;
+}
+
+.tiptap-content h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0.5rem 0;
+}
+
+.tiptap-content h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0.5rem 0;
+}
+
+.tiptap-content h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0.5rem 0;
+}
+
+.tiptap-content p {
+  margin: 0.5rem 0;
+}
+
+.tiptap-content ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+
+.tiptap-content ol {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+
+.tiptap-content li {
+  margin: 0.25rem 0;
+}
+
+.tiptap-content blockquote {
+  border-left: 3px solid #d1d5db;
+  padding-left: 1rem;
+  margin: 0.5rem 0;
+  color: #6b7280;
+}
+
+.tiptap-content code {
+  background-color: #f3f4f6;
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+  font-family: monospace;
+}
+
+.tiptap-content pre {
+  background-color: #1f2937;
+  color: #f9fafb;
+  padding: 0.75rem;
+  border-radius: 0.375rem;
+  overflow-x: auto;
+}
+
+.tiptap-content pre code {
+  background-color: transparent;
+  padding: 0;
+}
+
+.tiptap-content table {
+  border-collapse: collapse;
+  margin: 0.5rem 0;
+  width: 100%;
+}
+
+.tiptap-content th,
+.tiptap-content td {
+  border: 1px solid #d1d5db;
+  padding: 0.5rem;
+  text-align: left;
+}
+
+.tiptap-content th {
+  background-color: #f3f4f6;
+  font-weight: 600;
+}
+
+.tiptap-content a {
+  color: #4f46e5;
+  text-decoration: underline;
+}
+
+/* ============================================
+   Dark Mode Styles
+   ============================================ */
+
+/* Editor Container - Dark Mode */
+.dark .tiptap-container {
+  background-color: #1f2937; /* gray-800 */
+  border-color: #4b5563; /* gray-600 */
+}
+
+/* Toolbar - Dark Mode */
+.dark .tiptap-toolbar {
+  background-color: #374151; /* gray-700 */
+  border-color: #4b5563; /* gray-600 */
+}
+
+.dark .tiptap-toolbar button {
+  background-color: #4b5563; /* gray-600 */
+  border-color: #6b7280; /* gray-500 */
+  color: #f3f4f6; /* gray-100 */
+}
+
+.dark .tiptap-toolbar button:hover {
+  background-color: #6b7280; /* gray-500 */
+}
+
+.dark .tiptap-toolbar button.is-active {
+  background-color: #6366f1; /* indigo-500 */
+  border-color: #6366f1;
+  color: #fff;
+}
+
+.dark .tiptap-toolbar-divider {
+  background-color: #6b7280; /* gray-500 */
+}
+
+/* Editor Content Area - Dark Mode */
+.dark .tiptap-editor-content {
+  background-color: #1f2937; /* gray-800 */
+  color: #f3f4f6; /* gray-100 */
+}
+
+/* Typography in Editor - Dark Mode */
+.dark .tiptap-editor-content blockquote {
+  border-left-color: #6b7280; /* gray-500 */
+  color: #9ca3af; /* gray-400 */
+}
+
+.dark .tiptap-editor-content code {
+  background-color: #374151; /* gray-700 */
+  color: #f9fafb; /* gray-50 */
+}
+
+.dark .tiptap-editor-content hr {
+  border-top-color: #4b5563; /* gray-600 */
+}
+
+/* Tables in Editor - Dark Mode */
+.dark .tiptap-editor-content th,
+.dark .tiptap-editor-content td {
+  border-color: #4b5563; /* gray-600 */
+}
+
+.dark .tiptap-editor-content th {
+  background-color: #374151; /* gray-700 */
+}
+
+.dark .tiptap-editor-content .selectedCell {
+  background-color: #312e81; /* indigo-900 */
+}
+
+/* Links in Editor - Dark Mode */
+.dark .tiptap-editor-content a {
+  color: #818cf8; /* indigo-400 */
+}
+
+/* Placeholder - Dark Mode */
+.dark .tiptap-editor-content p.is-editor-empty:first-child::before {
+  color: #6b7280; /* gray-500 */
+}
+
+/* ============================================
+   TipTap Content Display Styles - Dark Mode
+   ============================================ */
+
+.dark .tiptap-content {
+  color: #f3f4f6; /* gray-100 */
+}
+
+.dark .tiptap-content blockquote {
+  border-left-color: #6b7280; /* gray-500 */
+  color: #9ca3af; /* gray-400 */
+}
+
+.dark .tiptap-content code {
+  background-color: #374151; /* gray-700 */
+  color: #f9fafb; /* gray-50 */
+}
+
+.dark .tiptap-content th,
+.dark .tiptap-content td {
+  border-color: #4b5563; /* gray-600 */
+}
+
+.dark .tiptap-content th {
+  background-color: #374151; /* gray-700 */
+}
+
+.dark .tiptap-content a {
+  color: #818cf8; /* indigo-400 */
+}

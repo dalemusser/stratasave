@@ -1,0 +1,64 @@
+{{ define "invitations/accept" }}
+  {{ template "layout" . }}
+{{ end }}
+
+{{ define "content" }}
+<div class="flex flex-col h-full">
+<div class="mb-4">
+  <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ .Title }}</h1>
+</div>
+
+<div class="p-4 bg-white dark:bg-gray-800 rounded shadow text-gray-700 dark:text-gray-300 text-sm flex-1 mb-2">
+  {{ if .Error }}
+    <div class="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 p-2 rounded mb-4 max-w-md">
+      {{ .Error }}
+    </div>
+    {{ if not .Token }}
+      <p class="text-gray-500 dark:text-gray-400 mt-4">
+        {{ if .IsLoggedIn }}
+          <a href="/dashboard" class="text-indigo-600 dark:text-indigo-400 hover:underline">Go to Dashboard</a>
+        {{ else }}
+          <a href="/login" class="text-indigo-600 dark:text-indigo-400 hover:underline">Go to Login</a>
+        {{ end }}
+      </p>
+    {{ end }}
+  {{ end }}
+
+  {{ if .Token }}
+    <p class="mb-4 max-w-md text-gray-600 dark:text-gray-400">
+      Complete your registration for <strong>{{ .Email }}</strong>.
+    </p>
+    <p class="mb-4 max-w-md text-gray-500 dark:text-gray-500 text-xs">
+      Your account will use email verification for login. Each time you sign in,
+      we'll send a secure link to your email address.
+    </p>
+
+    <form method="POST" action="/invite" class="space-y-4 max-w-md">
+      <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+      <input type="hidden" name="token" value="{{ .Token }}">
+
+      <!-- Full Name -->
+      <div>
+        <label for="full_name" class="block font-semibold mb-1">Full Name</label>
+        <input
+          type="text"
+          id="full_name"
+          name="full_name"
+          value="{{ .FullName }}"
+          class="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 dark:bg-gray-700 dark:text-gray-100"
+          required
+          autofocus
+        />
+      </div>
+
+      <!-- Submit -->
+      <div class="pt-2">
+        <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">
+          Create Account
+        </button>
+      </div>
+    </form>
+  {{ end }}
+</div>
+</div>
+{{ end }}

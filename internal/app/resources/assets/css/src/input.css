@@ -1,0 +1,81 @@
+@import "tailwindcss";
+
+/* Use class-based dark mode (.dark class) instead of prefers-color-scheme */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* Set default border color to gray-200, matching Tailwind CDN behavior */
+  --default-border-color: #e5e7eb;
+  --default-border-color-dark: #4b5563;
+}
+
+@layer base {
+  /* Apply gray border color to all elements by default */
+  *, ::before, ::after {
+    border-color: var(--default-border-color);
+  }
+
+  /* Dark mode base styles */
+  .dark {
+    color-scheme: dark;
+  }
+
+  .dark *, .dark ::before, .dark ::after {
+    border-color: var(--default-border-color-dark);
+  }
+
+  /* Form elements in dark mode */
+  .dark input,
+  .dark select,
+  .dark textarea {
+    background-color: #374151; /* gray-700 */
+    border-color: #4b5563; /* gray-600 */
+    color: #f3f4f6; /* gray-100 */
+  }
+
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    color: #9ca3af; /* gray-400 */
+  }
+
+  .dark input:focus,
+  .dark select:focus,
+  .dark textarea:focus {
+    border-color: #6366f1; /* indigo-500 */
+  }
+
+  /* Hover states in dark mode - prevent white backgrounds */
+  .dark .hover\:bg-gray-50:hover {
+    background-color: #374151 !important; /* gray-700 */
+  }
+
+  .dark .hover\:bg-gray-100:hover {
+    background-color: #374151 !important; /* gray-700 */
+  }
+
+  /* Dashboard stat cards hover in dark mode */
+  .dark .hover\:bg-indigo-50:hover {
+    background-color: #1e1b4b !important; /* indigo-950 */
+  }
+
+  /* Selection highlight in dark mode */
+  .dark .bg-indigo-50 {
+    background-color: rgba(79, 70, 229, 0.25) !important; /* indigo with transparency */
+  }
+
+  /* Count badges in dark mode */
+  .dark .bg-gray-200 {
+    background-color: #4b5563 !important; /* gray-600 */
+    color: #f3f4f6 !important; /* gray-100 */
+  }
+
+  .dark .bg-gray-100 {
+    background-color: #374151 !important; /* gray-700 */
+    color: #f3f4f6 !important; /* gray-100 */
+  }
+
+  /* Ensure text visibility in dark mode badges */
+  .dark .text-gray-700 {
+    color: #e5e7eb !important; /* gray-200 */
+  }
+}

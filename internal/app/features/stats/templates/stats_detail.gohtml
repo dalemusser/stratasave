@@ -1,0 +1,150 @@
+{{ define "stats/detail" }}
+  {{ template "layout" . }}
+{{ end }}
+
+{{ define "content" }}
+<div class="flex flex-col h-full">
+  <div class="mb-4 flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ .StatType }} Statistics</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400">{{ .StartDate }} to {{ .EndDate }}</p>
+    </div>
+    <a href="/stats" class="px-4 py-2 border dark:border-gray-600 rounded text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">Back to Stats</a>
+  </div>
+
+  <!-- Date Range Filter -->
+  <div class="bg-white dark:bg-gray-800 rounded shadow p-4 mb-4">
+    <form class="flex flex-wrap items-center gap-4" method="get" action="/stats/detail">
+      <input type="hidden" name="type" value="{{ .StatType }}">
+
+      <div class="flex items-center gap-2">
+        <label class="text-sm text-gray-600 dark:text-gray-400">From:</label>
+        <input type="date" name="start" value="{{ .StartDate }}" class="px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm">
+      </div>
+
+      <div class="flex items-center gap-2">
+        <label class="text-sm text-gray-600 dark:text-gray-400">To:</label>
+        <input type="date" name="end" value="{{ .EndDate }}" class="px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm">
+      </div>
+
+      <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm">Apply</button>
+    </form>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+    {{ if .TotalCounters }}
+    <div class="bg-white dark:bg-gray-800 rounded shadow p-4">
+      <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">Counter Totals</h3>
+      <div class="space-y-2">
+        {{ range $name, $value := .TotalCounters }}
+        <div class="flex justify-between items-center">
+          <span class="text-gray-700 dark:text-gray-300">{{ $name }}</span>
+          <span class="font-mono text-lg text-indigo-600 dark:text-indigo-400">{{ $value }}</span>
+        </div>
+        {{ end }}
+      </div>
+    </div>
+    {{ end }}
+
+    {{ if .AvgGauges }}
+    <div class="bg-white dark:bg-gray-800 rounded shadow p-4">
+      <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">Gauge Averages</h3>
+      <div class="space-y-2">
+        {{ range $name, $value := .AvgGauges }}
+        <div class="flex justify-between items-center">
+          <span class="text-gray-700 dark:text-gray-300">{{ $name }}</span>
+          <span class="font-mono text-lg text-green-600 dark:text-green-400">{{ printf "%.2f" $value }}</span>
+        </div>
+        {{ end }}
+      </div>
+    </div>
+    {{ end }}
+  </div>
+
+  <!-- Time Series Data -->
+  {{ if or .CounterSeries .GaugeSeries }}
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+    {{ range $name, $series := .CounterSeries }}
+    <div class="bg-white dark:bg-gray-800 rounded shadow p-4">
+      <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">{{ $name }} over time</h3>
+      <div class="space-y-1">
+        {{ range $series }}
+        <div class="flex items-center justify-between text-xs">
+          <span class="text-gray-500 dark:text-gray-400">{{ .Date }}</span>
+          <span class="font-mono text-indigo-600 dark:text-indigo-400">{{ printf "%.0f" .Value }}</span>
+        </div>
+        {{ end }}
+      </div>
+    </div>
+    {{ end }}
+    {{ range $name, $series := .GaugeSeries }}
+    <div class="bg-white dark:bg-gray-800 rounded shadow p-4">
+      <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">{{ $name }} over time</h3>
+      <div class="space-y-1">
+        {{ range $series }}
+        <div class="flex items-center justify-between text-xs">
+          <span class="text-gray-500 dark:text-gray-400">{{ .Date }}</span>
+          <span class="font-mono text-green-600 dark:text-green-400">{{ printf "%.2f" .Value }}</span>
+        </div>
+        {{ end }}
+      </div>
+    </div>
+    {{ end }}
+  </div>
+  {{ end }}
+
+  <!-- Daily Stats Table -->
+  {{ if .DailyStats }}
+  <div class="bg-white dark:bg-gray-800 rounded shadow flex-1 overflow-auto">
+    <div class="p-4 border-b dark:border-gray-700">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Daily Data</h2>
+    </div>
+    <div class="overflow-auto">
+      <table class="min-w-full text-sm text-left text-gray-700 dark:text-gray-300">
+        <thead class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 uppercase text-xs sticky top-0">
+          <tr>
+            <th class="px-4 py-3">Date</th>
+            <th class="px-4 py-3">Counters</th>
+            <th class="px-4 py-3">Gauges</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{ range .DailyStats }}
+          <tr class="border-b border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900/50">
+            <td class="px-4 py-3 font-mono text-xs">{{ .Date }}</td>
+            <td class="px-4 py-3 text-xs">
+              {{ if .Counters }}
+              <div class="flex flex-wrap gap-1">
+                {{ range $k, $v := .Counters }}
+                <span class="px-2 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded">{{ $k }}: {{ $v }}</span>
+                {{ end }}
+              </div>
+              {{ else }}
+              <span class="text-gray-400">-</span>
+              {{ end }}
+            </td>
+            <td class="px-4 py-3 text-xs">
+              {{ if .Gauges }}
+              <div class="flex flex-wrap gap-1">
+                {{ range $k, $v := .Gauges }}
+                <span class="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded">{{ $k }}: {{ printf "%.2f" $v }}</span>
+                {{ end }}
+              </div>
+              {{ else }}
+              <span class="text-gray-400">-</span>
+              {{ end }}
+            </td>
+          </tr>
+          {{ end }}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {{ else }}
+  <div class="bg-white dark:bg-gray-800 rounded shadow p-8 text-center">
+    <p class="text-gray-500 dark:text-gray-400">No data found for this period.</p>
+  </div>
+  {{ end }}
+</div>
+{{ end }}

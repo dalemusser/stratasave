@@ -1,0 +1,43 @@
+{{/* dashboard/admin - Admin dashboard */}}
+{{ define "dashboard/admin" }}
+{{ template "layout" . }}
+{{ end }}
+
+{{ define "content" }}
+<div class="flex flex-col h-full">
+  <div class="mb-4 flex items-center justify-between">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Admin Dashboard</h1>
+  </div>
+
+  <div class="p-4 bg-white dark:bg-gray-800 rounded shadow text-gray-700 dark:text-gray-300 text-sm mb-4">
+    <p>Welcome back, {{ .UserName }}!</p>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <a href="/dashboard/sessions" class="block p-4 bg-white dark:bg-gray-800 rounded shadow hover:shadow-md transition-shadow">
+      <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">Active Sessions</h3>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">View who's online and manage active sessions</p>
+    </a>
+    <a href="/system-users" class="block p-4 bg-white dark:bg-gray-800 rounded shadow hover:shadow-md transition-shadow">
+      <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">Users</h3>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage user accounts and permissions</p>
+    </a>
+    <a href="/audit" class="block p-4 bg-white dark:bg-gray-800 rounded shadow hover:shadow-md transition-shadow">
+      <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">Audit Log</h3>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">View security and activity events</p>
+    </a>
+    <a href="/settings" class="block p-4 bg-white dark:bg-gray-800 rounded shadow hover:shadow-md transition-shadow">
+      <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">Settings</h3>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Configure site settings and branding</p>
+    </a>
+    <a href="/invitations" class="block p-4 bg-white dark:bg-gray-800 rounded shadow hover:shadow-md transition-shadow">
+      <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">Invitations</h3>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage user invitations</p>
+    </a>
+    <a href="/announcements" class="block p-4 bg-white dark:bg-gray-800 rounded shadow hover:shadow-md transition-shadow">
+      <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">Announcements</h3>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Create and manage site announcements</p>
+    </a>
+  </div>
+</div>
+{{ end }}

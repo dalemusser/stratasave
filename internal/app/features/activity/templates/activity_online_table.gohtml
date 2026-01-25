@@ -1,0 +1,111 @@
+{{ define "activity_online_table" }}
+<div hx-get="/activity/online-table?status={{ .StatusFilter }}&search={{ .SearchQuery }}&sort={{ .SortBy }}&dir={{ .SortDir }}&page={{ .Page }}"
+     hx-trigger="every 30s"
+     hx-target="#online-table"
+     hx-swap="innerHTML">
+<!-- Pagination info and controls -->
+<div class="flex items-center justify-between mb-1 text-sm">
+  <div class="text-gray-600 dark:text-gray-400">
+    {{ if .Total }}{{ .RangeStart }}-{{ .RangeEnd }} of {{ .Total }} shown{{ else }}0 of 0 shown{{ end }}
+  </div>
+  <div class="flex items-center gap-2">
+    {{ if .HasPrev }}
+      <a class="inline-flex items-center justify-center h-7 leading-none text-xs px-2 border dark:border-gray-600 rounded text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 whitespace-nowrap cursor-pointer"
+         hx-get="/activity/online-table?status={{ .StatusFilter }}&search={{ .SearchQuery }}&sort={{ .SortBy }}&dir={{ .SortDir }}&page={{ .PrevPage }}"
+         hx-target="#online-table"
+         hx-swap="innerHTML">Prev</a>
+    {{ else }}
+      <span class="inline-flex items-center justify-center h-7 leading-none text-xs px-2 border dark:border-gray-600 rounded text-gray-400 dark:text-gray-500 whitespace-nowrap">Prev</span>
+    {{ end }}
+    {{ if .HasNext }}
+      <a class="inline-flex items-center justify-center h-7 leading-none text-xs px-2 border dark:border-gray-600 rounded text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 whitespace-nowrap cursor-pointer"
+         hx-get="/activity/online-table?status={{ .StatusFilter }}&search={{ .SearchQuery }}&sort={{ .SortBy }}&dir={{ .SortDir }}&page={{ .NextPage }}"
+         hx-target="#online-table"
+         hx-swap="innerHTML">Next</a>
+    {{ else }}
+      <span class="inline-flex items-center justify-center h-7 leading-none text-xs px-2 border dark:border-gray-600 rounded text-gray-400 dark:text-gray-500 whitespace-nowrap">Next</span>
+    {{ end }}
+  </div>
+</div>
+
+<div class="p-4 bg-white dark:bg-gray-800 rounded shadow overflow-auto" style="max-height: calc(100vh - 19rem); min-height: 10rem;">
+  {{ if eq (len .Users) 0 }}
+  <div class="p-8 text-center text-gray-500 dark:text-gray-400">
+    No users found matching the selected filters.
+  </div>
+  {{ else }}
+  <table class="min-w-full text-sm text-left text-gray-700 dark:text-gray-300">
+    <thead class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 uppercase text-xs sticky top-0 z-10">
+      <tr class="border-b border-gray-300 dark:border-gray-600">
+        <th class="px-4 py-3 w-1/4">
+          <a hx-get="/activity/online-table?status={{ $.StatusFilter }}&search={{ $.SearchQuery }}&sort=name&dir={{ if and (eq $.SortBy "name") (eq $.SortDir "asc") }}desc{{ else }}asc{{ end }}&page=1"
+             hx-target="#online-table"
+             hx-swap="innerHTML"
+             class="flex items-center gap-1 hover:text-gray-900 dark:hover:text-gray-200 cursor-pointer">
+            User
+            {{ if eq $.SortBy "name" }}
+              {{ if eq $.SortDir "asc" }}<span class="text-indigo-600 dark:text-indigo-400">▼</span>{{ else }}<span class="text-indigo-600 dark:text-indigo-400">▲</span>{{ end }}
+            {{ else }}
+              <span class="text-gray-400">▼</span>
+            {{ end }}
+          </a>
+        </th>
+        <th class="px-4 py-3 w-20 text-center">Status</th>
+        <th class="px-4 py-3">Current Activity</th>
+        <th class="px-4 py-3 w-28">
+          <a hx-get="/activity/online-table?status={{ $.StatusFilter }}&search={{ $.SearchQuery }}&sort=time&dir={{ if and (eq $.SortBy "time") (eq $.SortDir "desc") }}asc{{ else }}desc{{ end }}&page=1"
+             hx-target="#online-table"
+             hx-swap="innerHTML"
+             class="flex items-center gap-1 hover:text-gray-900 dark:hover:text-gray-200 cursor-pointer">
+            Time Today
+            {{ if eq $.SortBy "time" }}
+              {{ if eq $.SortDir "desc" }}<span class="text-indigo-600 dark:text-indigo-400">▼</span>{{ else }}<span class="text-indigo-600 dark:text-indigo-400">▲</span>{{ end }}
+            {{ else }}
+              <span class="text-gray-400">▼</span>
+            {{ end }}
+          </a>
+        </th>
+        <th class="px-4 py-3 w-20 text-right">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{ range .Users }}
+      <tr class="border-b border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900/50">
+        <td class="px-4 py-3 align-middle" title="{{ .Email }}">
+          <div class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{{ .Name }}</div>
+          <div class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ .LoginID }}</div>
+        </td>
+        <td class="px-4 py-3 align-middle text-center">
+          {{ if eq .Status "online" }}
+          <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-400">Active</span>
+          {{ else if eq .Status "idle" }}
+          <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-400">Idle</span>
+          {{ else }}
+          <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-300">Offline</span>
+          {{ end }}
+        </td>
+        <td class="px-4 py-3 align-middle text-sm text-gray-600 dark:text-gray-300">
+          {{ if .CurrentActivity }}
+            {{ .CurrentActivity }}
+          {{ else }}
+            <span class="text-gray-400">--</span>
+          {{ end }}
+        </td>
+        <td class="px-4 py-3 align-middle text-sm text-gray-600 dark:text-gray-300">
+          {{ .TimeTodayStr }}
+        </td>
+        <td class="px-4 py-3 align-middle text-right">
+          <a href="/activity/user/{{ .ID }}"
+             class="inline-block bg-indigo-600 text-white px-2 py-1 rounded text-xs hover:bg-indigo-700">
+            View
+          </a>
+        </td>
+      </tr>
+      {{ end }}
+    </tbody>
+  </table>
+  <div class="w-full border-t border-gray-300 dark:border-gray-600"></div>
+  {{ end }}
+</div>
+</div>
+{{ end }}

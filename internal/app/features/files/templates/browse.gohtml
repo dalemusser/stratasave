@@ -1,0 +1,235 @@
+{{ define "files/browse" }}
+  {{ template "layout" . }}
+{{ end }}
+
+{{ define "content" }}
+<div class="flex flex-col h-full">
+  <!-- Header with breadcrumbs and actions -->
+  <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Library</h1>
+      <!-- Breadcrumbs -->
+      <nav class="flex items-center text-base mt-1">
+        {{ range $index, $crumb := .Breadcrumbs }}
+          {{ if $index }}
+            <span class="mx-1 text-gray-400 dark:text-gray-500">/</span>
+          {{ end }}
+          <a href="{{ $crumb.URL }}" class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline">{{ $crumb.Name }}</a>
+        {{ end }}
+      </nav>
+    </div>
+
+    {{ if .IsAdmin }}
+    <div class="flex gap-2">
+      <a href="/library/folder/new{{ if .CurrentFolderID }}?parent={{ .CurrentFolderID }}{{ end }}"
+         class="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded hover:bg-gray-300 dark:hover:bg-gray-600">
+        New Folder
+      </a>
+      <a href="/library/file/upload{{ if .CurrentFolderID }}?folder={{ .CurrentFolderID }}{{ end }}"
+         class="px-3 py-1 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700">
+        Upload File
+      </a>
+    </div>
+    {{ end }}
+  </div>
+
+  <!-- Messages -->
+  <div class="p-4 bg-white dark:bg-gray-800 rounded shadow text-gray-700 dark:text-gray-300 text-sm flex-1 mb-2">
+    {{ if .Success }}
+      <div class="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 p-2 rounded mb-4">
+        {{ .Success }}
+      </div>
+    {{ end }}
+
+    {{ if .Error }}
+      <div class="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 p-2 rounded mb-4">
+        {{ .Error }}
+      </div>
+    {{ end }}
+
+    <!-- Sort and filter controls -->
+    <div class="flex flex-wrap items-center gap-4 mb-4 text-xs">
+      {{ if .ParentURL }}
+      <a href="{{ .ParentURL }}" class="px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600" title="Go up one folder">
+        ⬆️ Up
+      </a>
+      {{ end }}
+      <form method="get" class="flex items-center gap-2">
+        <label class="text-gray-500 dark:text-gray-400">Sort:</label>
+        <select name="sort" onchange="this.form.submit()"
+                class="px-2 py-1 border rounded bg-white dark:bg-gray-700 dark:border-gray-600 text-gray-700 dark:text-gray-300">
+          <option value="name" {{ if eq .SortBy "name" }}selected{{ end }}>Name</option>
+          <option value="date" {{ if eq .SortBy "date" }}selected{{ end }}>Date</option>
+          <option value="size" {{ if eq .SortBy "size" }}selected{{ end }}>Size</option>
+          <option value="type" {{ if eq .SortBy "type" }}selected{{ end }}>Type</option>
+        </select>
+        <select name="order" onchange="this.form.submit()"
+                class="px-2 py-1 border rounded bg-white dark:bg-gray-700 dark:border-gray-600 text-gray-700 dark:text-gray-300">
+          <option value="asc" {{ if eq .SortOrder "asc" }}selected{{ end }}>Asc</option>
+          <option value="desc" {{ if eq .SortOrder "desc" }}selected{{ end }}>Desc</option>
+        </select>
+        {{ if .TypeFilter }}
+          <input type="hidden" name="type" value="{{ .TypeFilter }}">
+        {{ end }}
+        {{ if .SearchQuery }}
+          <input type="hidden" name="q" value="{{ .SearchQuery }}">
+        {{ end }}
+      </form>
+
+      <form method="get" class="flex items-center gap-2">
+        <label class="text-gray-500 dark:text-gray-400">Filter:</label>
+        <select name="type" onchange="this.form.submit()"
+                class="px-2 py-1 border rounded bg-white dark:bg-gray-700 dark:border-gray-600 text-gray-700 dark:text-gray-300">
+          <option value="">All Types</option>
+          <option value="image/" {{ if eq .TypeFilter "image/" }}selected{{ end }}>Images</option>
+          <option value="video/" {{ if eq .TypeFilter "video/" }}selected{{ end }}>Videos</option>
+          <option value="audio/" {{ if eq .TypeFilter "audio/" }}selected{{ end }}>Audio</option>
+          <option value="application/pdf" {{ if eq .TypeFilter "application/pdf" }}selected{{ end }}>PDFs</option>
+          <option value="text/" {{ if eq .TypeFilter "text/" }}selected{{ end }}>Text</option>
+          <option value="~word" {{ if eq .TypeFilter "~word" }}selected{{ end }}>Documents</option>
+          <option value="~spreadsheet,excel" {{ if eq .TypeFilter "~spreadsheet,excel" }}selected{{ end }}>Spreadsheets</option>
+          <option value="~presentation,powerpoint" {{ if eq .TypeFilter "~presentation,powerpoint" }}selected{{ end }}>Presentations</option>
+          <option value="~zip,compressed,archive,tar" {{ if eq .TypeFilter "~zip,compressed,archive,tar" }}selected{{ end }}>Archives</option>
+          <option value="application/json" {{ if eq .TypeFilter "application/json" }}selected{{ end }}>JSON</option>
+          <option value="~xml" {{ if eq .TypeFilter "~xml" }}selected{{ end }}>XML</option>
+        </select>
+        <input type="hidden" name="sort" value="{{ .SortBy }}">
+        <input type="hidden" name="order" value="{{ .SortOrder }}">
+        {{ if .SearchQuery }}
+          <input type="hidden" name="q" value="{{ .SearchQuery }}">
+        {{ end }}
+      </form>
+
+      <span class="text-gray-500 dark:text-gray-400">
+        {{ .TotalFolders }} {{ if eq .TotalFolders 1 }}folder{{ else }}folders{{ end }},
+        {{ .TotalFiles }} {{ if eq .TotalFiles 1 }}file{{ else }}files{{ end }}
+      </span>
+    </div>
+
+    <!-- Content list -->
+    {{ if or .Folders .Files }}
+      <table class="min-w-full text-sm text-left text-gray-700 dark:text-gray-300">
+        <thead class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 uppercase text-xs sticky top-0 z-10">
+          <tr class="border-b border-gray-300 dark:border-gray-600">
+            <th class="px-4 py-3">Name</th>
+            <th class="px-4 py-3">Size</th>
+            <th class="px-4 py-3">Modified</th>
+            <th class="px-4 py-3 text-center">Info</th>
+            <th class="px-4 py-3 text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Folders -->
+          {{ range .Folders }}
+          <tr class="border-b border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900/50">
+            <td class="px-4 py-3 align-middle">
+              <a href="/library/folder/{{ .ID }}" class="hover:text-indigo-600 dark:hover:text-indigo-400">
+                <span class="mr-2">📁</span><span class="font-medium">{{ .Name }}</span>
+              </a>
+            </td>
+            <td class="px-4 py-3 align-middle text-gray-500 dark:text-gray-400">
+              {{ .ItemCount }} {{ if eq .ItemCount 1 }}item{{ else }}items{{ end }}
+            </td>
+            <td class="px-4 py-3 align-middle text-gray-500 dark:text-gray-400">
+              {{ .UpdatedAt }}
+            </td>
+            <td class="px-4 py-3 align-middle text-center">
+              <button
+                type="button"
+                hx-get="/library/folder/{{ .ID }}/info_modal"
+                hx-target="#modal-root"
+                hx-swap="innerHTML"
+                class="text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400"
+                title="View folder info"
+              >ℹ️</button>
+            </td>
+            <td class="px-4 py-3 align-middle text-right">
+              {{ if $.IsAdmin }}
+              <form
+                method="get"
+                action="/library/folder/{{ .ID }}/manage_modal"
+                hx-get="/library/folder/{{ .ID }}/manage_modal?return={{ $.CurrentPath | urlquery }}"
+                hx-target="#modal-root"
+                hx-swap="innerHTML"
+              >
+                <button
+                  type="submit"
+                  class="bg-indigo-600 text-white px-2 py-1 rounded text-xs hover:bg-indigo-700"
+                  title="Manage folder"
+                >
+                  Manage
+                </button>
+              </form>
+              {{ end }}
+            </td>
+          </tr>
+          {{ end }}
+
+          <!-- Files -->
+          {{ range .Files }}
+          <tr class="border-b border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900/50">
+            <td class="px-4 py-3 align-middle">
+              {{ if .IsViewable }}
+              <a href="/library/file/{{ .ID }}/view" target="_blank" class="hover:text-indigo-600 dark:hover:text-indigo-400 no-loader">
+                <span class="mr-2">{{ if eq .TypeIcon "image" }}🖼️{{ else if eq .TypeIcon "video" }}🎬{{ else if eq .TypeIcon "audio" }}🎵{{ else if eq .TypeIcon "pdf" }}📄{{ else if eq .TypeIcon "spreadsheet" }}📊{{ else if eq .TypeIcon "document" }}📝{{ else if eq .TypeIcon "archive" }}🗜️{{ else }}📄{{ end }}</span><span>{{ .Name }}</span>
+              </a>
+              {{ else }}
+              <a href="/library/file/{{ .ID }}/download" class="hover:text-indigo-600 dark:hover:text-indigo-400 no-loader">
+                <span class="mr-2">{{ if eq .TypeIcon "image" }}🖼️{{ else if eq .TypeIcon "video" }}🎬{{ else if eq .TypeIcon "audio" }}🎵{{ else if eq .TypeIcon "pdf" }}📄{{ else if eq .TypeIcon "spreadsheet" }}📊{{ else if eq .TypeIcon "document" }}📝{{ else if eq .TypeIcon "archive" }}🗜️{{ else }}📄{{ end }}</span><span>{{ .Name }}</span>
+              </a>
+              {{ end }}
+            </td>
+            <td class="px-4 py-3 align-middle text-gray-500 dark:text-gray-400">
+              {{ .Size }}
+            </td>
+            <td class="px-4 py-3 align-middle text-gray-500 dark:text-gray-400">
+              {{ .UpdatedAt }}
+            </td>
+            <td class="px-4 py-3 align-middle text-center">
+              <button
+                type="button"
+                hx-get="/library/file/{{ .ID }}/info_modal"
+                hx-target="#modal-root"
+                hx-swap="innerHTML"
+                class="text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400"
+                title="View file info"
+              >ℹ️</button>
+            </td>
+            <td class="px-4 py-3 align-middle text-right whitespace-nowrap">
+              {{ if .IsViewable }}
+              <a href="/library/file/{{ .ID }}/view" target="_blank" class="bg-green-600 text-white px-2 py-1 rounded text-xs hover:bg-green-700 no-loader" title="View file in browser">View</a>
+              {{ end }}
+              <a href="/library/file/{{ .ID }}/download" class="bg-green-600 text-white px-2 py-1 rounded text-xs hover:bg-green-700 no-loader" title="Download file">Download</a>
+              {{ if $.IsAdmin }}
+              <form method="get" action="/library/file/{{ .ID }}/manage_modal" hx-get="/library/file/{{ .ID }}/manage_modal?return={{ $.CurrentPath | urlquery }}" hx-target="#modal-root" hx-swap="innerHTML" class="inline">
+                <button type="submit" class="bg-indigo-600 text-white px-2 py-1 rounded text-xs hover:bg-indigo-700" title="Manage file">Manage</button>
+              </form>
+              {{ end }}
+            </td>
+          </tr>
+          {{ end }}
+        </tbody>
+      </table>
+    {{ else }}
+      <p class="text-gray-500 dark:text-gray-400 py-8 text-center">
+        {{ if .CurrentFolder }}
+          This folder is empty.
+          {{ if .IsAdmin }}
+            <a href="/library/folder/new?parent={{ .CurrentFolderID }}" class="text-indigo-600 dark:text-indigo-400 hover:underline">Create a folder</a>
+            or
+            <a href="/library/file/upload?folder={{ .CurrentFolderID }}" class="text-indigo-600 dark:text-indigo-400 hover:underline">upload a file</a>.
+          {{ end }}
+        {{ else }}
+          No files or folders yet.
+          {{ if .IsAdmin }}
+            <a href="/library/folder/new" class="text-indigo-600 dark:text-indigo-400 hover:underline">Create a folder</a>
+            or
+            <a href="/library/file/upload" class="text-indigo-600 dark:text-indigo-400 hover:underline">upload a file</a>.
+          {{ end }}
+        {{ end }}
+      </p>
+    {{ end }}
+  </div>
+</div>
+<div id="modal-root"></div>
+{{ end }}

@@ -1,0 +1,258 @@
+[
+  {
+    "id": "UTC",
+    "label": "UTC",
+    "region": "UTC"
+  },
+
+  {
+    "id": "America/New_York",
+    "label": "US Eastern (America/New_York)",
+    "region": "Americas"
+  },
+  {
+    "id": "America/Chicago",
+    "label": "US Central (America/Chicago)",
+    "region": "Americas"
+  },
+  {
+    "id": "America/Denver",
+    "label": "US Mountain (America/Denver)",
+    "region": "Americas"
+  },
+  {
+    "id": "America/Los_Angeles",
+    "label": "US Pacific (America/Los_Angeles)",
+    "region": "Americas"
+  },
+  {
+    "id": "America/Anchorage",
+    "label": "US Alaska (America/Anchorage)",
+    "region": "Americas"
+  },
+  {
+    "id": "Pacific/Honolulu",
+    "label": "US Hawaii (Pacific/Honolulu)",
+    "region": "Americas"
+  },
+  {
+    "id": "America/Indiana/Indianapolis",
+    "label": "Indiana Eastern (America/Indiana/Indianapolis)",
+    "region": "Americas"
+  },
+  {
+    "id": "America/Indiana/Knox",
+    "label": "Indiana Starke County (America/Indiana/Knox)",
+    "region": "Americas"
+  },
+  {
+    "id": "America/Indiana/Marengo",
+    "label": "Indiana Crawford County (America/Indiana/Marengo)",
+    "region": "Americas"
+  },
+  {
+    "id": "America/Indiana/Petersburg",
+    "label": "Indiana Pike County (America/Indiana/Petersburg)",
+    "region": "Americas"
+  },
+  {
+    "id": "America/Indiana/Tell_City",
+    "label": "Indiana Perry County (America/Indiana/Tell_City)",
+    "region": "Americas"
+  },
+  {
+    "id": "America/Indiana/Vevay",
+    "label": "Indiana Switzerland County (America/Indiana/Vevay)",
+    "region": "Americas"
+  },
+  {
+    "id": "America/Indiana/Vincennes",
+    "label": "Indiana Knox County (America/Indiana/Vincennes)",
+    "region": "Americas"
+  },
+  {
+    "id": "America/Indiana/Winamac",
+    "label": "Indiana Pulaski County (America/Indiana/Winamac)",
+    "region": "Americas"
+  },
+  {
+    "id": "America/Toronto",
+    "label": "Canada Eastern (America/Toronto)",
+    "region": "Americas"
+  },
+  {
+    "id": "America/Mexico_City",
+    "label": "Mexico (America/Mexico_City)",
+    "region": "Americas"
+  },
+  {
+    "id": "America/Bogota",
+    "label": "Colombia (America/Bogota)",
+    "region": "Americas"
+  },
+  {
+    "id": "America/Lima",
+    "label": "Peru (America/Lima)",
+    "region": "Americas"
+  },
+  {
+    "id": "America/Sao_Paulo",
+    "label": "Brazil (America/Sao_Paulo)",
+    "region": "Americas"
+  },
+  {
+    "id": "America/Argentina/Buenos_Aires",
+    "label": "Argentina (America/Argentina/Buenos_Aires)",
+    "region": "Americas"
+  },
+
+  {
+    "id": "Europe/London",
+    "label": "UK (Europe/London)",
+    "region": "Europe"
+  },
+  {
+    "id": "Europe/Paris",
+    "label": "France (Europe/Paris)",
+    "region": "Europe"
+  },
+  {
+    "id": "Europe/Berlin",
+    "label": "Germany (Europe/Berlin)",
+    "region": "Europe"
+  },
+  {
+    "id": "Europe/Madrid",
+    "label": "Spain (Europe/Madrid)",
+    "region": "Europe"
+  },
+  {
+    "id": "Europe/Rome",
+    "label": "Italy (Europe/Rome)",
+    "region": "Europe"
+  },
+  {
+    "id": "Europe/Warsaw",
+    "label": "Poland (Europe/Warsaw)",
+    "region": "Europe"
+  },
+  {
+    "id": "Europe/Athens",
+    "label": "Greece (Europe/Athens)",
+    "region": "Europe"
+  },
+  {
+    "id": "Europe/Moscow",
+    "label": "Russia (Europe/Moscow)",
+    "region": "Europe"
+  },
+
+  {
+    "id": "Africa/Cairo",
+    "label": "Egypt (Africa/Cairo)",
+    "region": "Africa"
+  },
+  {
+    "id": "Africa/Johannesburg",
+    "label": "South Africa (Africa/Johannesburg)",
+    "region": "Africa"
+  },
+  {
+    "id": "Africa/Lagos",
+    "label": "Nigeria (Africa/Lagos)",
+    "region": "Africa"
+  },
+  {
+    "id": "Africa/Nairobi",
+    "label": "East Africa (Africa/Nairobi)",
+    "region": "Africa"
+  },
+
+  {
+    "id": "Asia/Jerusalem",
+    "label": "Israel (Asia/Jerusalem)",
+    "region": "Middle East"
+  },
+  {
+    "id": "Asia/Riyadh",
+    "label": "Saudi Arabia (Asia/Riyadh)",
+    "region": "Middle East"
+  },
+  {
+    "id": "Asia/Dubai",
+    "label": "UAE (Asia/Dubai)",
+    "region": "Middle East"
+  },
+  {
+    "id": "Asia/Tehran",
+    "label": "Iran (Asia/Tehran)",
+    "region": "Middle East"
+  },
+
+  {
+    "id": "Asia/Kolkata",
+    "label": "India (Asia/Kolkata)",
+    "region": "Asia"
+  },
+  {
+    "id": "Asia/Kathmandu",
+    "label": "Nepal (Asia/Kathmandu)",
+    "region": "Asia"
+  },
+  {
+    "id": "Asia/Bangkok",
+    "label": "Thailand (Asia/Bangkok)",
+    "region": "Asia"
+  },
+  {
+    "id": "Asia/Singapore",
+    "label": "Singapore (Asia/Singapore)",
+    "region": "Asia"
+  },
+  {
+    "id": "Asia/Hong_Kong",
+    "label": "Hong Kong (Asia/Hong_Kong)",
+    "region": "Asia"
+  },
+  {
+    "id": "Asia/Shanghai",
+    "label": "China (Asia/Shanghai)",
+    "region": "Asia"
+  },
+  {
+    "id": "Asia/Tokyo",
+    "label": "Japan (Asia/Tokyo)",
+    "region": "Asia"
+  },
+  {
+    "id": "Asia/Seoul",
+    "label": "South Korea (Asia/Seoul)",
+    "region": "Asia"
+  },
+
+  {
+    "id": "Australia/Perth",
+    "label": "Western Australia (Australia/Perth)",
+    "region": "Australia & Pacific"
+  },
+  {
+    "id": "Australia/Adelaide",
+    "label": "Central Australia (Australia/Adelaide)",
+    "region": "Australia & Pacific"
+  },
+  {
+    "id": "Australia/Sydney",
+    "label": "Eastern Australia (Australia/Sydney)",
+    "region": "Australia & Pacific"
+  },
+  {
+    "id": "Pacific/Auckland",
+    "label": "New Zealand (Pacific/Auckland)",
+    "region": "Australia & Pacific"
+  },
+  {
+    "id": "Pacific/Chatham",
+    "label": "Chatham Islands (Pacific/Chatham)",
+    "region": "Australia & Pacific"
+  }
+]

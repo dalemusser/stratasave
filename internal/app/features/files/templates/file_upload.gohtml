@@ -1,0 +1,65 @@
+{{ define "files/file_upload" }}
+  {{ template "layout" . }}
+{{ end }}
+
+{{ define "content" }}
+<div class="flex flex-col h-full">
+<div class="mb-4 flex items-center">
+  <a href="{{ .BackURL }}"
+     class="text-sm px-3 py-1 border dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 mr-2 no-loader"
+     title="Go back">
+    ← Back
+  </a>
+  <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Upload File</h1>
+</div>
+
+<div class="p-4 bg-white dark:bg-gray-800 rounded shadow text-gray-700 dark:text-gray-300 text-sm flex-1 mb-2">
+  {{ if .Error }}
+    <div class="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 p-2 rounded mb-4 max-w-lg">
+      {{ .Error }}
+    </div>
+  {{ end }}
+
+  {{ if .FolderName }}
+    <p class="text-gray-500 dark:text-gray-400 mb-4">
+      Uploading to <span class="font-medium text-gray-700 dark:text-gray-300">{{ .FolderName }}</span>
+    </p>
+  {{ else }}
+    <p class="text-gray-500 dark:text-gray-400 mb-4">
+      Uploading to <span class="font-medium text-gray-700 dark:text-gray-300">Library (root)</span>
+    </p>
+  {{ end }}
+
+  <form method="POST" action="/library/file/upload" enctype="multipart/form-data" class="space-y-4 max-w-lg">
+    <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+    <input type="hidden" name="folder_id" value="{{ .FolderID }}">
+
+    <div>
+      <label for="file" class="block font-semibold mb-1">Select File</label>
+      <input type="file" id="file" name="file" required
+             class="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 dark:bg-gray-700 dark:text-gray-100
+                    file:mr-2 file:py-1 file:px-2 file:rounded file:border-0
+                    file:text-sm file:bg-indigo-50 file:text-indigo-700
+                    dark:file:bg-indigo-900/40 dark:file:text-indigo-400
+                    hover:file:bg-indigo-100 dark:hover:file:bg-indigo-900/60" />
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Maximum file size: {{ .MaxSize }}</p>
+    </div>
+
+    <div>
+      <label for="description" class="block font-semibold mb-1">Description (optional)</label>
+      <textarea id="description" name="description" rows="2"
+                class="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 dark:bg-gray-700 dark:text-gray-100"></textarea>
+    </div>
+
+    <div class="flex gap-2 pt-2">
+      <button type="submit" class="bg-indigo-600 text-white px-4 py-1 rounded hover:bg-indigo-700">
+        Upload File
+      </button>
+      <a href="{{ .BackURL }}" class="px-3 py-1 border dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700">
+        Cancel
+      </a>
+    </div>
+  </form>
+</div>
+</div>
+{{ end }}

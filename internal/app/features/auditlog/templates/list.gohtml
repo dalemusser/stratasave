@@ -1,0 +1,284 @@
+{{ define "auditlog/list" }}
+  {{ template "layout" . }}
+{{ end }}
+
+{{ define "content" }}
+<div class="flex flex-col h-full">
+  <div class="mb-4 flex items-center justify-between">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">📋 Audit Log</h1>
+    <div class="flex items-center gap-2">
+      <label for="tz-select" class="text-sm text-gray-600 dark:text-gray-400">Timezone:</label>
+      <select id="tz-select" class="text-sm border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+        {{ range .TimezoneGroups }}
+        <optgroup label="{{ .Region }}">
+          {{ range .Zones }}
+          <option value="{{ .ID }}">{{ .Label }}</option>
+          {{ end }}
+        </optgroup>
+        {{ end }}
+      </select>
+    </div>
+  </div>
+
+  <!-- Filter Controls -->
+  <form
+    id="audit-filter-form"
+    hx-get="/audit"
+    hx-target="#content"
+    hx-swap="innerHTML"
+    hx-push-url="true"
+    hx-trigger="change from:#audit-category, change from:#audit-event-type, change from:#audit-start-date, change from:#audit-end-date, change from:#tz-select"
+    class="bg-white dark:bg-gray-800 rounded shadow p-3 mb-2 flex flex-wrap items-center gap-2"
+  >
+    <input type="hidden" id="audit-tz" name="tz" value="{{ .Timezone }}" />
+    <select id="audit-category" name="category" class="px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+      <option value="" {{ if not .Category }}selected{{ end }}>All Categories</option>
+      {{ range .Categories }}
+      <option value="{{ .Value }}" {{ if eq $.Category .Value }}selected{{ end }}>{{ .Label }}</option>
+      {{ end }}
+    </select>
+
+    <select id="audit-event-type" name="event_type" class="px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+      <option value="" {{ if not .EventType }}selected{{ end }}>All Events</option>
+      {{ range .EventTypes }}
+      <option value="{{ . }}" {{ if eq $.EventType . }}selected{{ end }}>{{ . }}</option>
+      {{ end }}
+    </select>
+
+    <input
+      type="date"
+      id="audit-start-date"
+      name="start_date"
+      value="{{ .StartDate }}"
+      placeholder="Start date"
+      class="px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+    />
+
+    <input
+      type="date"
+      id="audit-end-date"
+      name="end_date"
+      value="{{ .EndDate }}"
+      placeholder="End date"
+      class="px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+    />
+
+    <a
+      href="/audit"
+      hx-get="/audit"
+      hx-target="#content"
+      hx-swap="innerHTML"
+      hx-push-url="true"
+      class="px-4 py-2 border dark:border-gray-600 rounded text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+    >Clear</a>
+  </form>
+
+  <div class="p-4 bg-white dark:bg-gray-800 rounded shadow flex-1 mb-4 overflow-auto">
+    <!-- Pagination -->
+    <div class="flex items-center justify-between mb-2">
+      <div class="text-gray-600 dark:text-gray-400 text-sm">
+        {{ if .Total }}{{ .RangeStart }}–{{ .RangeEnd }} of {{ .Total }} shown{{ else }}0 of 0 shown{{ end }}
+      </div>
+      <div class="flex items-center gap-2">
+        {{ if .HasPrev }}
+          <a class="inline-flex items-center justify-center h-7 leading-none text-xs px-2 border dark:border-gray-600 rounded text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 whitespace-nowrap"
+             href="/audit?category={{ .Category }}&event_type={{ .EventType }}&start_date={{ .StartDate }}&end_date={{ .EndDate }}&tz={{ .Timezone }}&page={{ .PrevPage }}"
+             hx-get="/audit?category={{ .Category }}&event_type={{ .EventType }}&start_date={{ .StartDate }}&end_date={{ .EndDate }}&tz={{ .Timezone }}&page={{ .PrevPage }}"
+             hx-target="#content" hx-swap="innerHTML" hx-push-url="true">Prev</a>
+        {{ else }}
+          <span class="inline-flex items-center justify-center h-7 leading-none text-xs px-2 border dark:border-gray-600 rounded text-gray-400 dark:text-gray-500 whitespace-nowrap">Prev</span>
+        {{ end }}
+        {{ if .HasNext }}
+          <a class="inline-flex items-center justify-center h-7 leading-none text-xs px-2 border dark:border-gray-600 rounded text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 whitespace-nowrap"
+             href="/audit?category={{ .Category }}&event_type={{ .EventType }}&start_date={{ .StartDate }}&end_date={{ .EndDate }}&tz={{ .Timezone }}&page={{ .NextPage }}"
+             hx-get="/audit?category={{ .Category }}&event_type={{ .EventType }}&start_date={{ .StartDate }}&end_date={{ .EndDate }}&tz={{ .Timezone }}&page={{ .NextPage }}"
+             hx-target="#content" hx-swap="innerHTML" hx-push-url="true">Next</a>
+        {{ else }}
+          <span class="inline-flex items-center justify-center h-7 leading-none text-xs px-2 border dark:border-gray-600 rounded text-gray-400 dark:text-gray-500 whitespace-nowrap">Next</span>
+        {{ end }}
+      </div>
+    </div>
+
+    <!-- Events Table -->
+    <div class="overflow-auto" style="max-height: calc(100vh - 18rem); min-height: 10rem;">
+      <table class="min-w-full text-sm text-left text-gray-700 dark:text-gray-300">
+        <colgroup>
+          <col style="width: 180px;" />
+          <col style="width: 100px;" />
+          <col style="width: 200px;" />
+          <col style="width: 180px;" />
+          <col style="width: 120px;" />
+          <col style="width: 80px;" />
+        </colgroup>
+        <thead class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 uppercase text-xs sticky top-0 z-10">
+          <tr class="border-b border-gray-300 dark:border-gray-600">
+            <th class="px-4 py-3">Timestamp</th>
+            <th class="px-4 py-3">Category</th>
+            <th class="px-4 py-3">Event</th>
+            <th class="px-4 py-3">Actor</th>
+            <th class="px-4 py-3">IP</th>
+            <th class="px-4 py-3 text-center">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{ range .Items }}
+          <tr class="border-b border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900/50">
+          <td class="px-4 py-3 align-middle whitespace-nowrap">
+            <time class="tz-time" datetime="{{ .Timestamp.Format "2006-01-02T15:04:05Z07:00" }}">{{ .Timestamp.Format "Jan 02, 2006 15:04:05" }}</time>
+          </td>
+          <td class="px-4 py-3 align-middle">
+            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs
+                         {{ if eq .Category "auth" }}bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-400
+                         {{ else if eq .Category "admin" }}bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-400
+                         {{ else if eq .Category "security" }}bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-400
+                         {{ else }}bg-gray-100 text-gray-700 dark:bg-gray-600 dark:text-gray-300{{ end }}">
+              {{ .Category }}
+            </span>
+          </td>
+          <td class="px-4 py-3 align-middle">
+            <div class="truncate" title="{{ .EventType }}">{{ .EventType }}</div>
+          </td>
+          <td class="px-4 py-3 align-middle">
+            {{ if .ActorName }}
+            <div class="truncate" title="{{ .ActorName }}">{{ .ActorName }}</div>
+            {{ else if index .Details "attempted_login_id" }}
+            <div class="truncate text-gray-500 dark:text-gray-400 italic" title="{{ index .Details "attempted_login_id" }} (not found)">{{ index .Details "attempted_login_id" }}</div>
+            {{ end }}
+          </td>
+          <td class="px-4 py-3 align-middle">
+            <div class="truncate" title="{{ .IP }}">{{ .IP }}</div>
+          </td>
+          <td class="px-4 py-3 align-middle text-center">
+            {{ if .Success }}
+              <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-400">OK</span>
+            {{ else }}
+              <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-400">Fail</span>
+            {{ end }}
+          </td>
+        </tr>
+          {{ else }}
+          <tr>
+            <td colspan="6" class="px-4 py-6 text-center text-gray-500 dark:text-gray-400">No audit events found.</td>
+          </tr>
+          {{ end }}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+    var tzSelect = document.getElementById('tz-select');
+    var tzHidden = document.getElementById('audit-tz');
+    if (!tzSelect) return;
+
+    var STORAGE_KEY = 'audit_log_timezone';
+
+    // Detect browser timezone
+    var browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+    // Get stored timezone or use browser timezone
+    var storedTz = localStorage.getItem(STORAGE_KEY);
+    var currentTz = storedTz || browserTz;
+
+    // Find the closest match in our select options
+    function findTimezoneOption(tz) {
+        var options = tzSelect.options;
+        for (var i = 0; i < options.length; i++) {
+            if (options[i].value === tz) {
+                return tz;
+            }
+        }
+        // If not found, try to find a match by region prefix
+        var parts = tz.split('/');
+        if (parts.length >= 2) {
+            var prefix = parts[0] + '/' + parts[1];
+            for (var i = 0; i < options.length; i++) {
+                if (options[i].value.startsWith(prefix)) {
+                    return options[i].value;
+                }
+            }
+        }
+        // Default to UTC if no match
+        return 'UTC';
+    }
+
+    // Sync hidden input with select
+    function syncHiddenInput(tz) {
+        if (tzHidden) {
+            tzHidden.value = tz;
+        }
+    }
+
+    // Set initial selection (use URL param if present, else stored/browser)
+    var urlTz = tzHidden ? tzHidden.value : '';
+    var selectedTz = urlTz || findTimezoneOption(currentTz);
+    tzSelect.value = selectedTz;
+    syncHiddenInput(selectedTz);
+
+    // Format all timestamps
+    function formatTimestamps(tz) {
+        var times = document.querySelectorAll('.tz-time');
+        times.forEach(function(el) {
+            var iso = el.getAttribute('datetime');
+            if (!iso) return;
+
+            var date = new Date(iso);
+            if (isNaN(date.getTime())) return;
+
+            // Format: "Jan 11, 2026 15:03:46 PST"
+            var options = {
+                timeZone: tz,
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false,
+                timeZoneName: 'short'
+            };
+
+            try {
+                var formatted = date.toLocaleString('en-US', options);
+                // Reformat from "Jan 11, 2026, 15:03:46 PST" to "Jan 11, 2026 15:03:46 PST"
+                formatted = formatted.replace(/, (\d{2}:)/, ' $1');
+                el.textContent = formatted;
+            } catch (e) {
+                console.warn('Invalid timezone:', tz, e);
+            }
+        });
+    }
+
+    // Initial format
+    formatTimestamps(selectedTz);
+
+    // Handle timezone change - sync hidden input and save to localStorage
+    // The form will auto-submit due to hx-trigger on #tz-select change
+    tzSelect.addEventListener('change', function() {
+        var tz = tzSelect.value;
+        localStorage.setItem(STORAGE_KEY, tz);
+        syncHiddenInput(tz);
+        formatTimestamps(tz);
+    });
+
+    // Re-format after HTMX content swap (for pagination/filtering)
+    document.body.addEventListener('htmx:afterSwap', function(evt) {
+        if (evt.detail.target.id === 'content') {
+            var newTzSelect = document.getElementById('tz-select');
+            var newTzHidden = document.getElementById('audit-tz');
+            if (newTzSelect) {
+                // Use URL param if present, else stored/browser
+                var urlTz = newTzHidden ? newTzHidden.value : '';
+                var tz = urlTz || localStorage.getItem(STORAGE_KEY) || browserTz;
+                var selected = findTimezoneOption(tz);
+                newTzSelect.value = selected;
+                if (newTzHidden) newTzHidden.value = selected;
+                formatTimestamps(selected);
+            }
+        }
+    });
+})();
+</script>
+{{ end }}

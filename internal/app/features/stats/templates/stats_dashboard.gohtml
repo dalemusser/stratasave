@@ -1,0 +1,148 @@
+{{ define "stats/dashboard" }}
+  {{ template "layout" . }}
+{{ end }}
+
+{{ define "content" }}
+<div class="flex flex-col h-full">
+  <div class="mb-4 flex items-center justify-between">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Statistics</h1>
+    <a href="/dashboard" class="px-4 py-2 border dark:border-gray-600 rounded text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">Back to Dashboard</a>
+  </div>
+
+  <!-- Period Selector -->
+  <div class="bg-white dark:bg-gray-800 rounded shadow p-4 mb-4">
+    <form class="flex flex-wrap items-center gap-4" method="get" action="/stats">
+      <div class="flex items-center gap-2">
+        <label class="text-sm text-gray-600 dark:text-gray-400">Period:</label>
+        <select name="period" onchange="this.form.submit()" class="px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm">
+          <option value="day" {{ if eq .Period "day" }}selected{{ end }}>Last 24 hours</option>
+          <option value="week" {{ if eq .Period "week" }}selected{{ end }}>Last 7 days</option>
+          <option value="month" {{ if eq .Period "month" }}selected{{ end }}>Last 30 days</option>
+        </select>
+      </div>
+
+      {{ if .StatTypes }}
+      <div class="flex items-center gap-2">
+        <label class="text-sm text-gray-600 dark:text-gray-400">Type:</label>
+        <select name="type" onchange="this.form.submit()" class="px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm">
+          {{ range .StatTypes }}
+          <option value="{{ . }}" {{ if eq . $.SelectedType }}selected{{ end }}>{{ . }}</option>
+          {{ end }}
+        </select>
+      </div>
+      {{ end }}
+
+      <div class="flex items-center gap-2">
+        <label class="text-sm text-gray-600 dark:text-gray-400">From:</label>
+        <input type="date" name="start" value="{{ .StartDate }}" class="px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm">
+      </div>
+
+      <div class="flex items-center gap-2">
+        <label class="text-sm text-gray-600 dark:text-gray-400">To:</label>
+        <input type="date" name="end" value="{{ .EndDate }}" class="px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm">
+      </div>
+
+      <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm">Apply</button>
+    </form>
+  </div>
+
+  {{ if not .StatTypes }}
+  <!-- No Stats Yet -->
+  <div class="bg-white dark:bg-gray-800 rounded shadow p-8 text-center">
+    <p class="text-gray-500 dark:text-gray-400">No statistics have been recorded yet.</p>
+    <p class="text-sm text-gray-400 dark:text-gray-500 mt-2">Statistics will appear here as your application records data.</p>
+  </div>
+  {{ else }}
+
+  <!-- Stat Cards -->
+  {{ if .Cards }}
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+    {{ range .Cards }}
+    <div class="bg-white dark:bg-gray-800 rounded shadow p-4">
+      <div class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ .Label }}</div>
+      <div class="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{{ .Value }}</div>
+      {{ if .Delta }}
+      <div class="mt-1 text-sm {{ if eq .DeltaType "positive" }}text-green-600 dark:text-green-400{{ else if eq .DeltaType "negative" }}text-red-600 dark:text-red-400{{ else }}text-gray-500 dark:text-gray-400{{ end }}">
+        {{ .Delta }}
+      </div>
+      {{ end }}
+      {{ if .Description }}
+      <div class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ .Description }}</div>
+      {{ end }}
+    </div>
+    {{ end }}
+  </div>
+  {{ end }}
+
+  <!-- Time Series Data -->
+  {{ if or .CounterSeries .GaugeSeries }}
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+    {{ range $name, $series := .CounterSeries }}
+    <div class="bg-white dark:bg-gray-800 rounded shadow p-4">
+      <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">{{ $name }}</h3>
+      <div class="space-y-1">
+        {{ range $series }}
+        <div class="flex items-center justify-between text-xs">
+          <span class="text-gray-500 dark:text-gray-400">{{ .Date }}</span>
+          <span class="font-mono text-indigo-600 dark:text-indigo-400">{{ printf "%.0f" .Value }}</span>
+        </div>
+        {{ end }}
+      </div>
+    </div>
+    {{ end }}
+    {{ range $name, $series := .GaugeSeries }}
+    <div class="bg-white dark:bg-gray-800 rounded shadow p-4">
+      <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">{{ $name }} (avg)</h3>
+      <div class="space-y-1">
+        {{ range $series }}
+        <div class="flex items-center justify-between text-xs">
+          <span class="text-gray-500 dark:text-gray-400">{{ .Date }}</span>
+          <span class="font-mono text-green-600 dark:text-green-400">{{ printf "%.2f" .Value }}</span>
+        </div>
+        {{ end }}
+      </div>
+    </div>
+    {{ end }}
+  </div>
+  {{ end }}
+
+  <!-- Daily Stats Table -->
+  {{ if .DailyStats }}
+  <div class="bg-white dark:bg-gray-800 rounded shadow flex-1 overflow-auto">
+    <div class="p-4 border-b dark:border-gray-700">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Daily Breakdown</h2>
+    </div>
+    <div class="overflow-auto">
+      <table class="min-w-full text-sm text-left text-gray-700 dark:text-gray-300">
+        <thead class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 uppercase text-xs">
+          <tr>
+            <th class="px-4 py-3">Date</th>
+            <th class="px-4 py-3">Counters</th>
+            <th class="px-4 py-3">Gauges</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{ range .DailyStats }}
+          <tr class="border-b border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900/50">
+            <td class="px-4 py-3 font-mono text-xs">{{ .Date }}</td>
+            <td class="px-4 py-3 text-xs">
+              {{ range $k, $v := .Counters }}
+              <span class="inline-block mr-2 mb-1 px-2 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded">{{ $k }}: {{ $v }}</span>
+              {{ end }}
+            </td>
+            <td class="px-4 py-3 text-xs">
+              {{ range $k, $v := .Gauges }}
+              <span class="inline-block mr-2 mb-1 px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded">{{ $k }}: {{ printf "%.2f" $v }}</span>
+              {{ end }}
+            </td>
+          </tr>
+          {{ end }}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {{ end }}
+
+  {{ end }}
+</div>
+{{ end }}

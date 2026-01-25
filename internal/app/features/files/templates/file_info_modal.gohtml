@@ -1,0 +1,58 @@
+{{ define "files/file_info_modal" }}
+<div class="fixed inset-0 z-50 flex items-center justify-center">
+  <div class="absolute inset-0 bg-black/40"
+       onclick="document.getElementById('modal-root').innerHTML=''"></div>
+
+  <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-300 dark:border-gray-600 max-w-md w-full p-4 space-y-4">
+    <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">File Information</h2>
+
+    <div class="flex items-center gap-3">
+      <span class="text-3xl">{{ if eq .TypeIcon "image" }}🖼️{{ else if eq .TypeIcon "video" }}🎬{{ else if eq .TypeIcon "audio" }}🎵{{ else if eq .TypeIcon "pdf" }}📄{{ else if eq .TypeIcon "spreadsheet" }}📊{{ else if eq .TypeIcon "document" }}📝{{ else if eq .TypeIcon "presentation" }}📽️{{ else if eq .TypeIcon "archive" }}🗜️{{ else }}📄{{ end }}</span>
+      <div>
+        <p class="font-medium text-gray-900 dark:text-gray-100 text-lg break-all">{{ .Name }}</p>
+      </div>
+    </div>
+
+    {{ if .Description }}
+    <div class="bg-gray-100 dark:bg-gray-700 rounded p-3">
+      <p class="text-sm text-gray-600 dark:text-gray-300">{{ .Description }}</p>
+    </div>
+    {{ end }}
+
+    <div class="space-y-2 text-sm">
+      <div class="flex justify-between py-1 border-b border-gray-200 dark:border-gray-700">
+        <span class="text-gray-500 dark:text-gray-400">Size</span>
+        <span class="text-gray-900 dark:text-gray-100">{{ .Size }}</span>
+      </div>
+      <div class="flex justify-between py-1 border-b border-gray-200 dark:border-gray-700">
+        <span class="text-gray-500 dark:text-gray-400">Type</span>
+        <span class="text-gray-900 dark:text-gray-100">{{ .ContentType }}</span>
+      </div>
+      <div class="flex justify-between py-1 border-b border-gray-200 dark:border-gray-700">
+        <span class="text-gray-500 dark:text-gray-400">Created</span>
+        <span class="text-gray-900 dark:text-gray-100">{{ .CreatedAt }}</span>
+      </div>
+      <div class="flex justify-between py-1">
+        <span class="text-gray-500 dark:text-gray-400">Last Modified</span>
+        <span class="text-gray-900 dark:text-gray-100">{{ .UpdatedAt }}</span>
+      </div>
+    </div>
+
+    <div class="flex justify-between pt-2">
+      <button
+        type="button"
+        class="px-3 py-1 border rounded text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+        onclick="document.getElementById('modal-root').innerHTML=''"
+      >
+        Close
+      </button>
+      <div class="flex gap-2">
+        {{ if .IsViewable }}
+        <a href="/library/file/{{ .ID }}/view" target="_blank" class="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 no-loader">View</a>
+        {{ end }}
+        <a href="/library/file/{{ .ID }}/download" class="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 no-loader">Download</a>
+      </div>
+    </div>
+  </div>
+</div>
+{{ end }}

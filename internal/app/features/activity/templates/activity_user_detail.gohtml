@@ -1,0 +1,280 @@
+{{ define "activity_user_detail" }}
+  {{ template "layout" . }}
+{{ end }}
+
+{{ define "content" }}
+<div class="flex items-center justify-between mb-4">
+  <div class="flex items-center gap-3">
+    <a href="/activity" class="text-sm px-3 py-1 border dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700">
+      &larr; Dashboard
+    </a>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Activity History</h1>
+  </div>
+  <div class="flex items-center gap-2">
+    <label for="tz-select" class="text-sm text-gray-600 dark:text-gray-400">Timezone:</label>
+    <select id="tz-select" class="text-sm border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+      {{ range .TimezoneGroups }}
+      <optgroup label="{{ .Region }}">
+        {{ range .Zones }}
+        <option value="{{ .ID }}">{{ .Label }}</option>
+        {{ end }}
+      </optgroup>
+      {{ end }}
+    </select>
+  </div>
+</div>
+<input type="hidden" id="activity-tz" value="{{ .Timezone }}" />
+
+<!-- User Info -->
+<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 mb-6">
+  <table class="w-full">
+    <tr>
+      <td class="align-top pr-8">
+        <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">{{ .UserName }}</h2>
+        {{ if .LoginID }}
+        <p class="text-sm text-gray-500 dark:text-gray-400">{{ .LoginID }}</p>
+        {{ end }}
+      </td>
+      <td class="align-top pr-8">
+        <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Email</p>
+        <p class="text-sm text-gray-700 dark:text-gray-300">{{ if .Email }}{{ .Email }}{{ else }}--{{ end }}</p>
+      </td>
+      <td class="align-top">
+        <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Role</p>
+        <p class="text-sm text-gray-700 dark:text-gray-300">{{ if .UserRole }}{{ .UserRole }}{{ else }}--{{ end }}</p>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<!-- Session History Header with Refresh Controls -->
+<div class="flex items-center justify-between mb-4">
+  <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Session History</h3>
+  <div class="flex items-center gap-2">
+    <button id="refresh-btn"
+            type="button"
+            class="text-sm px-2 py-1 border dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+            title="Refresh now">
+      Refresh
+    </button>
+    <span id="countdown" class="text-xs text-gray-500 dark:text-gray-400 w-8 text-center">30s</span>
+  </div>
+</div>
+
+<!-- Auto-refreshing content -->
+<div id="user-detail-content">
+  {{ template "activity_user_detail_content" . }}
+</div>
+
+<script>
+(function() {
+  var countdown = 30;
+  var countdownEl = document.getElementById('countdown');
+  var refreshBtn = document.getElementById('refresh-btn');
+  var tzSelect = document.getElementById('tz-select');
+  var tzHidden = document.getElementById('activity-tz');
+  var countdownInterval = null;
+
+  var STORAGE_KEY = 'activity_history_timezone';
+
+  // Detect browser timezone
+  var browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  // Get stored timezone or use browser timezone
+  var storedTz = localStorage.getItem(STORAGE_KEY);
+  var currentTz = storedTz || browserTz;
+
+  // Find the closest match in our select options
+  function findTimezoneOption(tz) {
+    if (!tzSelect) return 'UTC';
+    var options = tzSelect.options;
+    for (var i = 0; i < options.length; i++) {
+      if (options[i].value === tz) {
+        return tz;
+      }
+    }
+    // If not found, try to find a match by region prefix
+    var parts = tz.split('/');
+    if (parts.length >= 2) {
+      var prefix = parts[0] + '/' + parts[1];
+      for (var i = 0; i < options.length; i++) {
+        if (options[i].value.startsWith(prefix)) {
+          return options[i].value;
+        }
+      }
+    }
+    // Default to UTC if no match
+    return 'UTC';
+  }
+
+  // Set initial selection
+  if (tzSelect) {
+    var urlTz = tzHidden ? tzHidden.value : '';
+    var selectedTz = urlTz || findTimezoneOption(currentTz);
+    tzSelect.value = selectedTz;
+    if (tzHidden) tzHidden.value = selectedTz;
+  }
+
+  // Format all timestamps in selected timezone
+  function formatTimestamps(tz) {
+    // Format session dates (class="tz-date")
+    document.querySelectorAll('.tz-date').forEach(function(el) {
+      var iso = el.getAttribute('data-datetime');
+      if (!iso) return;
+      var date = new Date(iso);
+      if (isNaN(date.getTime())) return;
+      try {
+        el.textContent = date.toLocaleDateString('en-US', {
+          timeZone: tz,
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        });
+      } catch (e) {}
+    });
+
+    // Format session times (class="tz-time")
+    document.querySelectorAll('.tz-time').forEach(function(el) {
+      var iso = el.getAttribute('data-datetime');
+      if (!iso) return;
+      var date = new Date(iso);
+      if (isNaN(date.getTime())) return;
+      try {
+        el.textContent = date.toLocaleTimeString('en-US', {
+          timeZone: tz,
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        });
+      } catch (e) {}
+    });
+
+    // Format session header range (class="tz-session-range")
+    document.querySelectorAll('.tz-session-range').forEach(function(el) {
+      var loginIso = el.getAttribute('data-login');
+      var logoutIso = el.getAttribute('data-logout');
+      var isActive = el.getAttribute('data-active') === 'true';
+      if (!loginIso) return;
+
+      var loginDate = new Date(loginIso);
+      if (isNaN(loginDate.getTime())) return;
+
+      try {
+        var loginTime = loginDate.toLocaleTimeString('en-US', {
+          timeZone: tz,
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        });
+        var tzAbbr = loginDate.toLocaleTimeString('en-US', {
+          timeZone: tz,
+          timeZoneName: 'short'
+        }).split(' ').pop();
+
+        var logoutTime = '(active)';
+        if (logoutIso && !isActive) {
+          var logoutDate = new Date(logoutIso);
+          if (!isNaN(logoutDate.getTime())) {
+            logoutTime = logoutDate.toLocaleTimeString('en-US', {
+              timeZone: tz,
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true
+            });
+          }
+        }
+
+        el.textContent = loginTime + ' - ' + logoutTime + ' ' + tzAbbr;
+      } catch (e) {}
+    });
+
+    // Format event times with "Last activity at X" description update
+    document.querySelectorAll('.tz-event-time').forEach(function(el) {
+      var iso = el.getAttribute('data-datetime');
+      if (!iso) return;
+      var date = new Date(iso);
+      if (isNaN(date.getTime())) return;
+      try {
+        var timeStr = date.toLocaleTimeString('en-US', {
+          timeZone: tz,
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        });
+        el.textContent = timeStr;
+
+        // Update "Last activity" description if this is an idle event
+        var descEl = el.closest('.event-row')?.querySelector('.tz-idle-desc');
+        if (descEl) {
+          descEl.textContent = 'Last activity at ' + timeStr;
+        }
+      } catch (e) {}
+    });
+  }
+
+  // Initial format
+  if (tzSelect) {
+    formatTimestamps(tzSelect.value);
+  }
+
+  // Handle timezone change
+  if (tzSelect) {
+    tzSelect.addEventListener('change', function() {
+      var tz = tzSelect.value;
+      localStorage.setItem(STORAGE_KEY, tz);
+      if (tzHidden) tzHidden.value = tz;
+      formatTimestamps(tz);
+    });
+  }
+
+  // Update countdown display
+  function updateCountdown() {
+    if (countdownEl) {
+      countdownEl.textContent = countdown + 's';
+    }
+  }
+
+  // Start countdown timer
+  function startCountdown() {
+    countdown = 30;
+    updateCountdown();
+    if (countdownInterval) clearInterval(countdownInterval);
+    countdownInterval = setInterval(function() {
+      countdown--;
+      if (countdown < 0) countdown = 30;
+      updateCountdown();
+    }, 1000);
+  }
+
+  // Manual refresh - trigger HTMX to reload the content
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', function() {
+      var content = document.querySelector('#user-detail-content > div[hx-get]');
+      if (content) {
+        var url = content.getAttribute('hx-get');
+        if (url) {
+          htmx.ajax('GET', url, {target: '#user-detail-content', swap: 'innerHTML'});
+        }
+      }
+      countdown = 30;
+      updateCountdown();
+    });
+  }
+
+  // After HTMX swaps content, reset countdown and re-format timestamps
+  document.body.addEventListener('htmx:afterSwap', function(evt) {
+    if (evt.detail.target && evt.detail.target.id === 'user-detail-content') {
+      countdown = 30;
+      updateCountdown();
+      // Re-format timestamps with current timezone
+      if (tzSelect) {
+        formatTimestamps(tzSelect.value);
+      }
+    }
+  });
+
+  // Start countdown on page load
+  startCountdown();
+})();
+</script>
+{{ end }}

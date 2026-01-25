@@ -1,0 +1,166 @@
+{{ define "apikeys/list" }}
+  {{ template "layout" . }}
+{{ end }}
+
+{{ define "content" }}
+<div class="flex flex-col h-full">
+  <div class="mb-4 flex items-center justify-between">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">API Keys</h1>
+    <a href="/api-keys/new" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm">Create API Key</a>
+  </div>
+
+  <div class="p-4 bg-white dark:bg-gray-800 rounded shadow flex-1 mb-4 overflow-auto">
+    {{ if .Keys }}
+    <table class="min-w-full text-sm text-left text-gray-700 dark:text-gray-300">
+      <thead class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 uppercase text-xs sticky top-0 z-10">
+        <tr class="border-b border-gray-300 dark:border-gray-600">
+          <th class="px-4 py-3">Name</th>
+          <th class="px-4 py-3">Key Prefix</th>
+          <th class="px-4 py-3">Status</th>
+          <th class="px-4 py-3 text-right">Usage</th>
+          <th class="px-4 py-3">Last Used</th>
+          <th class="px-4 py-3">Created</th>
+          <th class="px-4 py-3 text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{ range .Keys }}
+        <tr class="border-b border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900/50">
+          <td class="px-4 py-3">
+            <div class="font-medium text-gray-900 dark:text-gray-100" title="{{ .Description }}">{{ .Name }}</div>
+          </td>
+          <td class="px-4 py-3 font-mono">{{ .KeyPrefix }}...</td>
+          <td class="px-4 py-3">
+            {{ if .IsActive }}
+            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-400">Active</span>
+            {{ else }}
+            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-400">Revoked</span>
+            {{ end }}
+          </td>
+          <td class="px-4 py-3 text-right">{{ .UsageCount }}</td>
+          <td class="px-4 py-3">{{ or .LastUsedAt "Never" }}</td>
+          <td class="px-4 py-3">{{ .CreatedAt }}</td>
+          <td class="px-4 py-3 text-right">
+            <form
+              method="get"
+              action="/api-keys/{{ .ID }}/manage_modal"
+              hx-get="/api-keys/{{ .ID }}/manage_modal?return={{ $.CurrentPath | urlquery }}"
+              hx-target="#modal-root"
+              hx-swap="innerHTML"
+              aria-label="Manage API key"
+            >
+              <button
+                type="submit"
+                class="bg-indigo-600 text-white px-2 py-1 rounded text-xs hover:bg-indigo-700"
+                title="Manage {{ .Name }}"
+              >
+                Manage
+              </button>
+            </form>
+          </td>
+        </tr>
+        {{ end }}
+      </tbody>
+    </table>
+    {{ else }}
+    <div class="p-8 text-center">
+      <p class="text-gray-500 dark:text-gray-400 mb-4">No API keys have been created yet.</p>
+      <a href="/api-keys/new" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm">Create Your First API Key</a>
+    </div>
+    {{ end }}
+  </div>
+</div>
+<div id="modal-root"></div>
+{{ end }}
+
+{{ define "apikeys/manage_modal" }}
+<div class="fixed inset-0 z-50 flex items-center justify-center">
+  <div class="absolute inset-0 bg-black/40"
+       onclick="document.getElementById('modal-root').innerHTML=''"></div>
+
+  <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-300 dark:border-gray-600 max-w-md w-full p-4 space-y-4">
+    <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Manage API Key</h2>
+
+    <div class="text-sm text-gray-700 dark:text-gray-300 space-y-1">
+      <div class="font-medium">{{ .Key.Name }}</div>
+      <div class="font-mono text-xs text-gray-500 dark:text-gray-400">{{ .Key.KeyPrefix }}...</div>
+      <div class="flex items-center gap-2">
+        {{ if .Key.IsActive }}
+        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-400">Active</span>
+        {{ else }}
+        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-400">Revoked</span>
+        {{ end }}
+        <span class="text-gray-500 dark:text-gray-400">· {{ .Key.UsageCount }} uses</span>
+      </div>
+    </div>
+
+    <div class="flex justify-center gap-2">
+      <!-- View -->
+      <a
+        href="/api-keys/{{ .Key.ID }}?return={{ .BackURL | urlquery }}"
+        class="px-3 py-1 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700"
+      >View</a>
+
+      {{ if .Key.IsActive }}
+      <!-- Edit -->
+      <a
+        href="/api-keys/{{ .Key.ID }}/edit?return={{ .BackURL | urlquery }}"
+        class="px-3 py-1 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700"
+      >Edit</a>
+      {{ end }}
+    </div>
+
+    {{ if .Key.IsActive }}
+    <!-- Revoke Section -->
+    <div class="p-4 border border-amber-300 dark:border-amber-700 rounded bg-amber-50 dark:bg-amber-950">
+      <h3 class="text-sm font-semibold text-amber-800 dark:text-amber-300 mb-2">Revoke Key</h3>
+      <p class="text-xs text-amber-700 dark:text-amber-400 mb-3">
+        Revoking disables the key but keeps its history.
+      </p>
+      <form
+        method="post"
+        action="/api-keys/{{ .Key.ID }}/revoke"
+        hx-post="/api-keys/{{ .Key.ID }}/revoke"
+        hx-confirm="Are you sure you want to revoke this API key?"
+      >
+        <input type="hidden" name="csrf_token" value="{{ $.CSRFToken }}">
+        <button
+          type="submit"
+          class="px-3 py-1 bg-amber-600 text-white rounded text-sm hover:bg-amber-700"
+        >Revoke Key</button>
+      </form>
+    </div>
+    {{ end }}
+
+    <!-- Danger Zone -->
+    <div class="p-4 border border-red-300 dark:border-red-700 rounded bg-red-50 dark:bg-red-900/20">
+      <h3 class="text-sm font-semibold text-red-800 dark:text-red-300 mb-2">Danger Zone</h3>
+      <p class="text-xs text-red-700 dark:text-red-400 mb-3">
+        Permanently delete this API key. This action cannot be undone.
+      </p>
+      <form
+        method="post"
+        action="/api-keys/{{ .Key.ID }}/delete"
+        hx-post="/api-keys/{{ .Key.ID }}/delete"
+        hx-confirm="Are you sure you want to permanently delete this API key?"
+      >
+        <input type="hidden" name="csrf_token" value="{{ $.CSRFToken }}">
+        <button
+          type="submit"
+          class="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+        >Delete Key</button>
+      </form>
+    </div>
+
+    <div class="flex justify-start">
+      <button
+        type="button"
+        class="px-3 py-1 border dark:border-gray-600 rounded text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+        onclick="document.getElementById('modal-root').innerHTML=''"
+      >
+        Cancel
+      </button>
+    </div>
+  </div>
+</div>
+{{ end }}

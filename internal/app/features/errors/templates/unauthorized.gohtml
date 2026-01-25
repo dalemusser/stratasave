@@ -1,0 +1,13 @@
+{{/* errors/unauthorized - 401 Unauthorized */}}
+{{ define "errors/unauthorized" }}
+{{ template "layout" . }}
+{{ end }}
+
+{{ define "content" }}
+<div class="text-center py-16">
+    <h1 class="text-6xl font-bold text-gray-300 dark:text-gray-600 mb-4">401</h1>
+    <h2 class="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Unauthorized</h2>
+    <p class="text-gray-600 dark:text-gray-400 mb-8">Please log in to access this page.</p>
+    <a href="/login" class="bg-indigo-600 text-white px-6 py-3 rounded hover:bg-indigo-700">Log In</a>
+</div>
+{{ end }}

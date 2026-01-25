@@ -1,0 +1,58 @@
+{{ define "systemusers/show" }}
+  {{ template "layout" . }}
+{{ end }}
+
+{{ define "content" }}
+<div class="flex flex-col h-full">
+  <div class="mb-4 flex items-center">
+    <a href="{{ .BackURL }}"
+       class="text-sm px-3 py-1 border dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 mr-2 no-loader"
+       title="Go back">
+      ← Back
+    </a>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">👤 View System User</h1>
+  </div>
+
+  <div class="p-4 bg-white dark:bg-gray-800 rounded shadow text-gray-700 dark:text-gray-300 text-sm flex-1 mb-2">
+    <div class="space-y-3 max-w-xl">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
+        <input type="text" value="{{ .FullName }}" readonly
+               class="w-full border dark:border-gray-600 p-2 rounded bg-gray-50 dark:bg-gray-700 dark:text-gray-100 text-sm" />
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Login ID</label>
+        <input type="text" value="{{ .LoginID }}" readonly
+               class="w-full border dark:border-gray-600 p-2 rounded bg-gray-50 dark:bg-gray-700 dark:text-gray-100 text-sm" />
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Role</label>
+        <input type="text" value="{{ .UserRole }}" readonly
+               class="w-full border dark:border-gray-600 p-2 rounded bg-gray-50 dark:bg-gray-700 dark:text-gray-100 text-sm" />
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Auth Method</label>
+        <input type="text" value="{{ .Auth }}" readonly
+               class="w-full border dark:border-gray-600 p-2 rounded bg-gray-50 dark:bg-gray-700 dark:text-gray-100 text-sm" />
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+        <input type="text" value="{{ .Status }}" readonly
+               class="w-full border dark:border-gray-600 p-2 rounded bg-gray-50 dark:bg-gray-700 dark:text-gray-100 text-sm" />
+      </div>
+
+      <!-- Action button -->
+      <div class="pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
+        <a href="/system-users/{{ .ID }}/edit?return={{ .BackURL | urlquery }}"
+           class="px-3 py-1 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700">
+          Edit User
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{{ end }}

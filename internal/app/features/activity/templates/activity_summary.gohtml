@@ -1,0 +1,88 @@
+{{ define "activity_summary" }}
+  {{ template "layout" . }}
+{{ end }}
+
+{{ define "content" }}
+<div class="flex items-center justify-between mb-4">
+  <div class="flex items-center gap-3">
+    <a href="/activity" class="text-sm px-3 py-1 border dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700">
+      &larr; Dashboard
+    </a>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Weekly Summary</h1>
+  </div>
+</div>
+
+<!-- Week Navigation -->
+<div class="flex items-center gap-4 mb-4">
+  <a href="/activity/summary?week={{ .PrevWeek }}"
+     class="text-sm px-3 py-1 border dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700">
+    &larr; Previous
+  </a>
+  <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+    {{ .WeekStart }} - {{ .WeekEnd }}
+  </span>
+  {{ if not .IsThisWeek }}
+  <a href="/activity/summary?week={{ .NextWeek }}"
+     class="text-sm px-3 py-1 border dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700">
+    Next &rarr;
+  </a>
+  {{ else }}
+  <span class="text-sm px-3 py-1 border border-gray-200 dark:border-gray-700 rounded text-gray-400 dark:text-gray-500">
+    Next &rarr;
+  </span>
+  {{ end }}
+  {{ if not .IsThisWeek }}
+  <a href="/activity/summary"
+     class="text-sm px-3 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700">
+    This Week
+  </a>
+  {{ end }}
+</div>
+
+<!-- Summary Table -->
+<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+  {{ if eq (len .Users) 0 }}
+  <div class="p-8 text-center text-gray-500 dark:text-gray-400">
+    No users found.
+  </div>
+  {{ else }}
+  <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+    <thead class="bg-gray-50 dark:bg-gray-900">
+      <tr>
+        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">User</th>
+        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sessions</th>
+        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Time</th>
+        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Outside Hours</th>
+        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"></th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+      {{ range .Users }}
+      <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+        <td class="px-4 py-3">
+          <div class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ .Name }}</div>
+          <div class="text-xs text-gray-500 dark:text-gray-400">{{ .LoginID }}</div>
+        </td>
+        <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300 text-right">{{ .SessionCount }}</td>
+        <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300 text-right">
+          {{ .TotalTimeStr }}
+        </td>
+        <td class="px-4 py-3 text-sm text-right">
+          {{ if gt .OutsideHours 0 }}
+          <span class="text-amber-600 dark:text-amber-400">{{ .OutsideHours }} sessions</span>
+          {{ else }}
+          <span class="text-gray-400">0</span>
+          {{ end }}
+        </td>
+        <td class="px-4 py-3 text-right">
+          <a href="/activity/user/{{ .ID }}" class="text-sm text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300">
+            View
+          </a>
+        </td>
+      </tr>
+      {{ end }}
+    </tbody>
+  </table>
+  {{ end }}
+</div>
+{{ end }}

@@ -1,0 +1,143 @@
+{{ define "invitations/list" }}
+  {{ template "layout" . }}
+{{ end }}
+
+{{ define "content" }}
+<div class="flex flex-col h-full">
+<div class="mb-4 flex items-center justify-between">
+  <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">✉️ Invitations</h1>
+  <a href="/invitations/new" class="px-3 py-1 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700">
+    Send Invitation
+  </a>
+</div>
+
+<div class="p-4 bg-white dark:bg-gray-800 rounded shadow text-gray-700 dark:text-gray-300 text-sm flex-1 mb-2">
+  {{ if .Success }}
+    <div class="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 p-2 rounded mb-4">
+      {{ .Success }}
+    </div>
+  {{ end }}
+
+  {{ if .Error }}
+    <div class="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 p-2 rounded mb-4">
+      {{ .Error }}
+    </div>
+  {{ end }}
+
+  {{ if .Invitations }}
+    <table class="min-w-full text-sm text-left text-gray-700 dark:text-gray-300">
+      <thead class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 uppercase text-xs sticky top-0 z-10">
+        <tr class="border-b border-gray-300 dark:border-gray-600">
+          <th class="px-4 py-3">Email</th>
+          <th class="px-4 py-3">Role</th>
+          <th class="px-4 py-3">Status</th>
+          <th class="px-4 py-3 text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{ range .Invitations }}
+        <tr class="border-b border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900/50">
+          <td class="px-4 py-3 align-middle">{{ .Email }}</td>
+          <td class="px-4 py-3 align-middle">
+            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-400 capitalize">
+              {{ .Role }}
+            </span>
+          </td>
+          <td class="px-4 py-3 align-middle">
+            {{ if .Expired }}
+              <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-400">Expired</span>
+            {{ else }}
+              <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-400">Pending</span>
+              <span class="text-xs text-gray-500 dark:text-gray-400 ml-1">{{ .ExpiresAt.Format "Jan 2, 2006" }}</span>
+            {{ end }}
+          </td>
+          <td class="px-4 py-3 align-middle text-right">
+            <form
+              method="get"
+              action="/invitations/{{ .ID }}/manage_modal"
+              hx-get="/invitations/{{ .ID }}/manage_modal?return={{ $.CurrentPath | urlquery }}"
+              hx-target="#modal-root"
+              hx-swap="innerHTML"
+            >
+              <button
+                type="submit"
+                class="bg-indigo-600 text-white px-2 py-1 rounded text-xs hover:bg-indigo-700"
+                title="Manage invitation"
+              >
+                Manage
+              </button>
+            </form>
+          </td>
+        </tr>
+        {{ end }}
+      </tbody>
+    </table>
+  {{ else }}
+    <p class="text-gray-500 dark:text-gray-400 py-4 text-center">
+      No pending invitations. <a href="/invitations/new" class="text-indigo-600 dark:text-indigo-400 hover:underline">Send one now</a>.
+    </p>
+  {{ end }}
+</div>
+</div>
+<div id="modal-root"></div>
+{{ end }}
+
+{{ define "invitations/manage_modal" }}
+<div class="fixed inset-0 z-50 flex items-center justify-center">
+  <div class="absolute inset-0 bg-black/40"
+       onclick="document.getElementById('modal-root').innerHTML=''"></div>
+
+  <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-300 dark:border-gray-600 max-w-md w-full p-4 space-y-4">
+    <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Manage Invitation</h2>
+
+    <p class="text-sm text-gray-700 dark:text-gray-300">
+      {{ .Email }}<br/>
+      <span class="text-gray-500 dark:text-gray-400 capitalize">{{ .Role }}</span>
+      <span class="mx-1">·</span>
+      {{ if .Expired }}
+        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-400">Expired</span>
+      {{ else }}
+        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-400">Pending</span>
+      {{ end }}
+    </p>
+
+    <div class="flex flex-col gap-3 pt-2">
+      <div class="flex justify-center gap-2">
+        <!-- Resend -->
+        <form method="POST" action="/invitations/{{ .ID }}/resend"
+              onsubmit="return confirm('Resend invitation to {{ .Email }}?');">
+          <input type="hidden" name="csrf_token" value="{{ $.CSRFToken }}">
+          <button
+            type="submit"
+            class="px-3 py-1 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700"
+          >
+            Resend
+          </button>
+        </form>
+
+        <!-- Revoke -->
+        <form method="POST" action="/invitations/{{ .ID }}/revoke"
+              onsubmit="return confirm('Revoke invitation for {{ .Email }}?');">
+          <input type="hidden" name="csrf_token" value="{{ $.CSRFToken }}">
+          <button
+            type="submit"
+            class="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+          >
+            Revoke
+          </button>
+        </form>
+      </div>
+
+      <div class="flex justify-start">
+        <button
+          type="button"
+          class="px-3 py-1 border rounded text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+          onclick="document.getElementById('modal-root').innerHTML=''"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{{ end }}

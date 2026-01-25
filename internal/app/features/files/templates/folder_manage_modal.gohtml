@@ -1,0 +1,75 @@
+{{ define "files/folder_manage_modal" }}
+<div class="fixed inset-0 z-50 flex items-center justify-center">
+  <div class="absolute inset-0 bg-black/40"
+       onclick="document.getElementById('modal-root').innerHTML=''"></div>
+
+  <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-300 dark:border-gray-600 max-w-md w-full p-4 space-y-4">
+    <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Manage Folder</h2>
+
+    <div class="flex items-center gap-2">
+      <span class="text-xl">📁</span>
+      <div>
+        <p class="font-medium text-gray-900 dark:text-gray-100">{{ .Name }}</p>
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+          {{ .ItemCount }} {{ if eq .ItemCount 1 }}item{{ else }}items{{ end }}
+        </p>
+      </div>
+    </div>
+
+    {{ if .Description }}
+    <p class="text-sm text-gray-600 dark:text-gray-400">
+      {{ .Description }}
+    </p>
+    {{ end }}
+
+    <div class="flex justify-center gap-2">
+      <!-- View (go into folder) -->
+      <a
+        href="/library/folder/{{ .ID }}"
+        class="px-3 py-1 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700"
+      >Open</a>
+
+      <!-- Edit -->
+      <a
+        href="/library/folder/{{ .ID }}/edit?return={{ .BackURL | urlquery }}"
+        class="px-3 py-1 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700"
+      >Edit</a>
+    </div>
+
+    <!-- Danger Zone -->
+    <div class="p-4 border border-red-300 dark:border-red-700 rounded bg-red-50 dark:bg-red-900/20">
+      <h3 class="text-sm font-semibold text-red-800 dark:text-red-300 mb-2">Danger Zone</h3>
+      <p class="text-xs text-red-700 dark:text-red-400 mb-3">
+        {{ if gt .ItemCount 0 }}
+        Permanently delete this folder and all its contents ({{ .ItemCount }} {{ if eq .ItemCount 1 }}item{{ else }}items{{ end }}). This action cannot be undone.
+        {{ else }}
+        Permanently delete this folder. This action cannot be undone.
+        {{ end }}
+      </p>
+      <form
+        method="POST"
+        action="/library/folder/{{ .ID }}/delete"
+        onsubmit="return confirm('{{ if gt .ItemCount 0 }}Delete this folder and ALL its contents ({{ .ItemCount }} {{ if eq .ItemCount 1 }}item{{ else }}items{{ end }})? This will permanently remove all files and subfolders. This action cannot be undone.{{ else }}Delete this folder? This action cannot be undone.{{ end }}');"
+      >
+        <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+        <button
+          type="submit"
+          class="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+        >
+          Delete Folder
+        </button>
+      </form>
+    </div>
+
+    <div class="flex justify-start">
+      <button
+        type="button"
+        class="px-3 py-1 border rounded text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+        onclick="document.getElementById('modal-root').innerHTML=''"
+      >
+        Cancel
+      </button>
+    </div>
+  </div>
+</div>
+{{ end }}

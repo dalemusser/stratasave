@@ -1,0 +1,53 @@
+{{ define "login/index" }}
+  {{ template "layout" . }}
+{{ end }}
+
+{{ define "content" }}
+<div class="flex flex-col h-full">
+<div class="mb-4">
+  <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">🔐 Login</h1>
+</div>
+
+<div class="p-4 bg-white dark:bg-gray-800 rounded shadow text-gray-700 dark:text-gray-300 text-sm flex-1 mb-2">
+  {{ if .Error }}
+    <div class="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 p-2 rounded mb-4 max-w-md">
+      {{ .Error }}
+    </div>
+  {{ end }}
+
+  <form method="POST" action="/login" class="space-y-3 max-w-md">
+    <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+    <input type="hidden" name="return" value="{{ .ReturnURL }}">
+    <!-- Login ID Field -->
+    <div>
+      <label for="login_id" class="block font-semibold mb-1">Login ID</label>
+      <input
+        type="text"
+        id="login_id"
+        name="login_id"
+        class="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 dark:bg-gray-700 dark:text-gray-100"
+        value="{{ .LoginID }}"
+        autocomplete="username"
+        autofocus
+      />
+    </div>
+
+    <!-- Submit Button -->
+    <button
+      type="submit"
+      class="bg-indigo-600 text-white px-3 py-1 rounded hover:bg-indigo-700"
+    >
+      Login
+    </button>
+  </form>
+
+  {{ if .GoogleEnabled }}
+  <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 max-w-md">
+    <a href="/auth/google" class="block text-center text-indigo-600 dark:text-indigo-400 hover:underline">
+      Login with Google
+    </a>
+  </div>
+  {{ end }}
+</div>
+</div>
+{{ end }}
