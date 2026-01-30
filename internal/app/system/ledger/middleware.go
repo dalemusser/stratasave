@@ -37,6 +37,10 @@ type Config struct {
 	// Set to 0 to disable body preview capture.
 	MaxBodyPreview int
 
+	// MaxBodyOnError is the maximum size of the full request body to capture when there's an error.
+	// Set to 0 to disable full body capture on errors. Default: 1MB.
+	MaxBodyOnError int
+
 	// HeadersToCapture is a list of header names to capture.
 	// Sensitive headers like Authorization are automatically redacted.
 	HeadersToCapture []string
@@ -51,6 +55,10 @@ type Config struct {
 
 	// CaptureErrors determines whether to capture error details.
 	CaptureErrors bool
+
+	// OnlyErrors if true, only logs requests that result in errors (status >= 400).
+	// This is useful for capturing API errors without logging all successful requests.
+	OnlyErrors bool
 }
 
 // DefaultConfig returns a Config with sensible defaults.
@@ -59,6 +67,7 @@ func DefaultConfig(store *ledgerstore.Store, logger *zap.Logger) Config {
 		Store:          store,
 		Logger:         logger,
 		MaxBodyPreview: 500,
+		MaxBodyOnError: 1024 * 1024, // 1MB
 		HeadersToCapture: []string{
 			"Content-Type",
 			"Accept",
@@ -121,9 +130,10 @@ func Middleware(cfg Config) func(http.Handler) http.Handler {
 
 			// Capture request body if needed
 			var bodyPreview string
+			var bodyFull string
 			var bodyHash string
 			var bodySize int64
-			if cfg.MaxBodyPreview > 0 && r.Body != nil && r.ContentLength > 0 {
+			if (cfg.MaxBodyPreview > 0 || cfg.MaxBodyOnError > 0) && r.Body != nil && r.ContentLength > 0 {
 				body, err := io.ReadAll(r.Body)
 				if err == nil {
 					bodySize = int64(len(body))
@@ -133,11 +143,18 @@ func Middleware(cfg Config) func(http.Handler) http.Handler {
 						bodyHash = hex.EncodeToString(hash[:])[:8]
 
 						// Capture preview (truncate if needed)
-						preview := string(body)
-						if len(preview) > cfg.MaxBodyPreview {
-							preview = preview[:cfg.MaxBodyPreview] + "..."
+						if cfg.MaxBodyPreview > 0 {
+							preview := string(body)
+							if len(preview) > cfg.MaxBodyPreview {
+								preview = preview[:cfg.MaxBodyPreview] + "..."
+							}
+							bodyPreview = preview
 						}
-						bodyPreview = preview
+
+						// Capture full body for potential error logging
+						if cfg.MaxBodyOnError > 0 && len(body) <= cfg.MaxBodyOnError {
+							bodyFull = string(body)
+						}
 					}
 					// Restore body for handler
 					r.Body = io.NopCloser(bytes.NewReader(body))
@@ -255,18 +272,25 @@ func Middleware(cfg Config) func(http.Handler) http.Handler {
 				if errMsg := GetErrorMessage(ctx); errMsg != "" {
 					entry.ErrorMessage = errMsg
 				}
+				// Save full body on errors
+				if bodyFull != "" {
+					entry.RequestBody = bodyFull
+				}
 			}
 
 			// Store entry asynchronously to not block response
-			go func() {
-				storeCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-				defer cancel()
-				if err := cfg.Store.Create(storeCtx, *entry); err != nil {
-					cfg.Logger.Error("failed to store ledger entry",
-						zap.String("request_id", requestID),
-						zap.Error(err))
-				}
-			}()
+			// If OnlyErrors is set, only store entries for error responses (status >= 400)
+			if !cfg.OnlyErrors || wrapped.statusCode >= 400 {
+				go func() {
+					storeCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+					defer cancel()
+					if err := cfg.Store.Create(storeCtx, *entry); err != nil {
+						cfg.Logger.Error("failed to store ledger entry",
+							zap.String("request_id", requestID),
+							zap.Error(err))
+					}
+				}()
+			}
 		})
 	}
 }

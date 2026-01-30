@@ -1,0 +1,40 @@
+{{ define "settingsbrowser/setting_partial" }}
+<div class="p-3 border-b dark:border-gray-700 flex flex-wrap items-center justify-between gap-2">
+  <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300">
+    Setting
+    {{ if .SelectedUser }}<span class="font-normal text-gray-500 dark:text-gray-400">for {{ .SelectedUser }}</span>{{ end }}
+  </h2>
+  {{ if and .SelectedGame .SelectedUser .Setting }}
+  <button type="button"
+          onclick="showDeleteModal('Delete Setting', 'Are you sure you want to delete this setting? This cannot be undone.', '/console/api/settings/{{ .SelectedGame }}/user/{{ .SelectedUser }}/delete')"
+          class="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700">
+    Delete
+  </button>
+  {{ end }}
+</div>
+
+<div class="flex-1 overflow-auto">
+{{ if and .SelectedGame .SelectedUser }}
+  {{ if .Setting }}
+  <div class="p-4">
+    <div class="mb-3 text-sm text-gray-600 dark:text-gray-400">
+      Last updated: <span class="tz-time" data-datetime="{{ .Setting.Timestamp.Format "2006-01-02T15:04:05Z" }}"></span><span class="tz-separator hidden"> (</span><span class="tz-utc">{{ .Setting.Timestamp.Format "Jan 02, 2006 15:04:05" }} UTC</span><span class="tz-separator hidden">)</span>
+    </div>
+    <details class="group" open>
+      <summary class="cursor-pointer text-xs text-indigo-600 dark:text-indigo-400 hover:underline">
+        <span class="group-open:hidden">Show setting data</span>
+        <span class="hidden group-open:inline">Hide setting data</span>
+      </summary>
+      <pre class="mt-2 p-3 text-xs bg-gray-50 dark:bg-gray-900 rounded overflow-auto max-h-64 text-gray-800 dark:text-gray-200">{{ .Setting.SettingsData }}</pre>
+    </details>
+  </div>
+  {{ else }}
+  <p class="p-4 text-sm text-gray-500 dark:text-gray-400">No setting found for this user.</p>
+  {{ end }}
+{{ else if .SelectedGame }}
+<p class="p-4 text-sm text-gray-500 dark:text-gray-400">Select a user to view their setting.</p>
+{{ else }}
+<p class="p-4 text-sm text-gray-500 dark:text-gray-400">Select a game and user to view settings.</p>
+{{ end }}
+</div>
+{{ end }}

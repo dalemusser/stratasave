@@ -1,0 +1,388 @@
+{{ define "savebrowser/playground" }}
+  {{ template "layout" . }}
+{{ end }}
+
+{{ define "content" }}
+<div class="flex flex-col h-full">
+  <!-- Header -->
+  <div class="mb-4 flex items-center justify-between">
+    <div class="flex items-center">
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">🧪 States API Playground</h1>
+      <button onclick="showInfoModal()" class="ml-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" title="What is this?">
+        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Content - Split View -->
+  <div class="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 min-h-0">
+    <!-- Request Panel -->
+    <div class="bg-white dark:bg-gray-800 rounded shadow flex flex-col">
+      <div class="p-3 border-b dark:border-gray-700">
+        <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Request</h2>
+      </div>
+      <div class="p-4 flex-1 overflow-auto">
+        <form id="playground-form" onsubmit="executeRequest(event)">
+          <!-- Operation Selector -->
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Operation</label>
+            <div class="flex gap-2">
+              <label class="flex items-center gap-2 px-4 py-2 border dark:border-gray-600 rounded cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                <input type="radio" name="operation" value="save" checked class="text-indigo-600">
+                <span class="text-sm text-gray-700 dark:text-gray-300">Save</span>
+              </label>
+              <label class="flex items-center gap-2 px-4 py-2 border dark:border-gray-600 rounded cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                <input type="radio" name="operation" value="load" class="text-indigo-600">
+                <span class="text-sm text-gray-700 dark:text-gray-300">Load</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Endpoint Display -->
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Endpoint</label>
+            <div class="text-sm text-gray-500 dark:text-gray-400">
+              <code id="endpoint-display" class="font-mono bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">{{ .APIEndpoint }}/save</code>
+            </div>
+          </div>
+
+          <!-- Legacy Endpoint Display -->
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Legacy Endpoint</label>
+            <div class="text-sm text-gray-500 dark:text-gray-400">
+              <code id="legacy-endpoint-display" class="font-mono bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">/save</code>
+            </div>
+          </div>
+
+          <!-- API Key Display -->
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">API Key</label>
+            <div class="flex items-center gap-2">
+              <code id="apikey-masked" class="font-mono bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-sm text-gray-500 dark:text-gray-400">********************************</code>
+              <code id="apikey-visible" class="hidden font-mono bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-sm text-gray-500 dark:text-gray-400">{{ .APIKey }}</code>
+              <button type="button" onclick="toggleApiKey()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" title="Show/Hide API Key">
+                <svg id="apikey-show-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                </svg>
+                <svg id="apikey-hide-icon" class="hidden w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- User ID -->
+          <div class="mb-4">
+            <label for="user_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">User ID</label>
+            <input type="text" id="user_id" name="user_id" placeholder="test-user" required
+                   class="w-full px-3 py-2 text-sm border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded focus:outline-none focus:ring-2 focus:ring-indigo-400">
+          </div>
+
+          <!-- Game -->
+          <div class="mb-4">
+            <label for="game" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Game</label>
+            <input type="text" id="game" name="game" placeholder="test-game" required
+                   class="w-full px-3 py-2 text-sm border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded focus:outline-none focus:ring-2 focus:ring-indigo-400">
+          </div>
+
+          <!-- Limit (for load) -->
+          <div class="mb-4" id="limit-field">
+            <label for="limit" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Limit (for load)</label>
+            <input type="number" id="limit" name="limit" value="1" min="1" max="100"
+                   class="w-full px-3 py-2 text-sm border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded focus:outline-none focus:ring-2 focus:ring-indigo-400">
+          </div>
+
+          <!-- Save Data (for save) -->
+          <div class="mb-4" id="save-data-field">
+            <label for="save_data" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Save Data (JSON)</label>
+            <textarea id="save_data" name="save_data" rows="8"
+                      class="w-full px-3 py-2 text-sm font-mono border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded focus:outline-none focus:ring-2 focus:ring-indigo-400 placeholder-example">{
+  "level": 1,
+  "score": 100,
+  "inventory": ["sword", "shield"]
+}</textarea>
+          </div>
+
+          <!-- Submit Button -->
+          <button type="submit" id="submit-btn"
+                  class="w-full px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 flex items-center justify-center gap-2">
+            <span id="submit-text">Send Request</span>
+            <span id="submit-spinner" class="hidden">
+              <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            </span>
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Response Panel -->
+    <div class="bg-white dark:bg-gray-800 rounded shadow flex flex-col">
+      <div class="p-3 border-b dark:border-gray-700 flex items-center justify-between">
+        <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Response</h2>
+        <div id="response-meta" class="text-sm text-gray-500 dark:text-gray-400 hidden">
+          <span id="response-status" class="font-semibold"></span>
+          <span class="mx-2">|</span>
+          <span id="response-time"></span>
+        </div>
+      </div>
+      <div class="flex-1 overflow-auto p-4">
+        <div id="response-placeholder" class="h-full flex items-center justify-center text-gray-400 dark:text-gray-500">
+          <p>Send a request to see the response</p>
+        </div>
+        <div id="response-content" class="hidden">
+          <!-- Headers -->
+          <div class="mb-4">
+            <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Headers</h3>
+            <pre id="response-headers" class="text-sm font-mono bg-gray-50 dark:bg-gray-900 p-3 rounded overflow-auto"></pre>
+          </div>
+          <!-- Body -->
+          <div>
+            <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Body</h3>
+            <pre id="response-body" class="text-sm font-mono bg-gray-50 dark:bg-gray-900 p-3 rounded overflow-auto max-h-96"></pre>
+          </div>
+        </div>
+        <div id="response-error" class="hidden">
+          <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-4">
+            <p class="text-red-700 dark:text-red-400" id="error-message"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Info Modal -->
+<div id="info-modal" class="hidden fixed inset-0 z-50">
+  <div class="fixed inset-0 bg-black/50" onclick="closeInfoModal()"></div>
+  <div class="fixed inset-0 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">About States API Playground</h3>
+        <button onclick="closeInfoModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <div class="text-sm text-gray-600 dark:text-gray-400 space-y-3">
+        <p>The <strong>States API Playground</strong> makes real HTTP requests to the States API endpoints, testing the complete API stack.</p>
+        <p><strong>Key characteristics:</strong></p>
+        <ul class="list-disc pl-5 space-y-1">
+          <li>Sends actual HTTP requests to the API</li>
+          <li>Uses API key authentication (Bearer token)</li>
+          <li>Records statistics in the API Stats dashboard</li>
+          <li>Shows real response times and status codes</li>
+          <li>Tests CORS, middleware, and serialization</li>
+        </ul>
+        <p class="text-xs text-gray-500 dark:text-gray-500 mt-4">For direct database access without API overhead, use the <strong>Browser</strong> instead.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Info modal functions
+function showInfoModal() {
+  document.getElementById('info-modal').classList.remove('hidden');
+}
+
+function closeInfoModal() {
+  document.getElementById('info-modal').classList.add('hidden');
+}
+
+// Toggle API key visibility
+function toggleApiKey() {
+  var masked = document.getElementById('apikey-masked');
+  var visible = document.getElementById('apikey-visible');
+  var showIcon = document.getElementById('apikey-show-icon');
+  var hideIcon = document.getElementById('apikey-hide-icon');
+
+  if (masked.classList.contains('hidden')) {
+    masked.classList.remove('hidden');
+    visible.classList.add('hidden');
+    showIcon.classList.remove('hidden');
+    hideIcon.classList.add('hidden');
+  } else {
+    masked.classList.add('hidden');
+    visible.classList.remove('hidden');
+    showIcon.classList.add('hidden');
+    hideIcon.classList.remove('hidden');
+  }
+}
+
+// Toggle fields and endpoint based on operation
+var apiEndpoint = '{{ .APIEndpoint }}';
+document.querySelectorAll('input[name="operation"]').forEach(function(radio) {
+  radio.addEventListener('change', function() {
+    var isSave = this.value === 'save';
+    document.getElementById('save-data-field').style.display = isSave ? 'block' : 'none';
+    document.getElementById('limit-field').style.display = isSave ? 'none' : 'block';
+    document.getElementById('endpoint-display').textContent = apiEndpoint + '/' + this.value;
+    document.getElementById('legacy-endpoint-display').textContent = '/' + this.value;
+  });
+});
+
+// Initialize field visibility
+document.getElementById('limit-field').style.display = 'none';
+
+// Placeholder-like behavior for JSON textarea
+(function() {
+  var saveDataEl = document.getElementById('save_data');
+  var exampleJson = saveDataEl.value;
+
+  // Style as placeholder initially
+  saveDataEl.classList.add('text-gray-400', 'dark:text-gray-500');
+
+  saveDataEl.addEventListener('focus', function() {
+    if (this.value === exampleJson) {
+      this.value = '';
+      this.classList.remove('text-gray-400', 'dark:text-gray-500');
+    }
+  });
+
+  saveDataEl.addEventListener('blur', function() {
+    if (this.value === '') {
+      this.value = exampleJson;
+      this.classList.add('text-gray-400', 'dark:text-gray-500');
+    }
+  });
+
+  saveDataEl.addEventListener('input', function() {
+    this.classList.remove('text-gray-400', 'dark:text-gray-500');
+  });
+})();
+
+function executeRequest(e) {
+  e.preventDefault();
+
+  var form = document.getElementById('playground-form');
+  var submitBtn = document.getElementById('submit-btn');
+  var submitText = document.getElementById('submit-text');
+  var submitSpinner = document.getElementById('submit-spinner');
+
+  // Disable button and show spinner
+  submitBtn.disabled = true;
+  submitText.textContent = 'Sending...';
+  submitSpinner.classList.remove('hidden');
+
+  // Gather form data
+  var operation = form.querySelector('input[name="operation"]:checked').value;
+  var userId = document.getElementById('user_id').value;
+  var game = document.getElementById('game').value;
+
+  var requestBody;
+  if (operation === 'save') {
+    var saveDataStr = document.getElementById('save_data').value;
+    try {
+      var saveData = JSON.parse(saveDataStr);
+      requestBody = {
+        user_id: userId,
+        game: game,
+        save_data: saveData
+      };
+    } catch (e) {
+      showError('Invalid JSON in save data: ' + e.message);
+      resetButton();
+      return;
+    }
+  } else {
+    var limit = parseInt(document.getElementById('limit').value) || 1;
+    requestBody = {
+      user_id: userId,
+      game: game,
+      limit: limit
+    };
+  }
+
+  // Get CSRF token
+  var csrfToken = document.querySelector('meta[name="csrf-token"]');
+  var headers = {
+    'Content-Type': 'application/json'
+  };
+  if (csrfToken) {
+    headers['X-CSRF-Token'] = csrfToken.content;
+  }
+
+  // Send request to execute endpoint
+  fetch('/console/api/state/playground/execute', {
+    method: 'POST',
+    headers: headers,
+    body: JSON.stringify({
+      operation: operation,
+      body: requestBody
+    })
+  })
+  .then(function(response) {
+    return response.json();
+  })
+  .then(function(data) {
+    if (data.error) {
+      showError(data.error);
+    } else {
+      showResponse(data);
+    }
+    resetButton();
+  })
+  .catch(function(err) {
+    showError('Request failed: ' + err.message);
+    resetButton();
+  });
+}
+
+function resetButton() {
+  var submitBtn = document.getElementById('submit-btn');
+  var submitText = document.getElementById('submit-text');
+  var submitSpinner = document.getElementById('submit-spinner');
+  submitBtn.disabled = false;
+  submitText.textContent = 'Send Request';
+  submitSpinner.classList.add('hidden');
+}
+
+function showResponse(data) {
+  // Hide placeholder, show content
+  document.getElementById('response-placeholder').classList.add('hidden');
+  document.getElementById('response-error').classList.add('hidden');
+  document.getElementById('response-content').classList.remove('hidden');
+  document.getElementById('response-meta').classList.remove('hidden');
+
+  // Set status
+  var statusEl = document.getElementById('response-status');
+  statusEl.textContent = data.status + ' ' + (data.status_text || '');
+  statusEl.className = 'font-semibold ' + (data.status >= 200 && data.status < 300 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400');
+
+  // Set time
+  document.getElementById('response-time').textContent = data.duration_ms + 'ms';
+
+  // Set headers
+  var headersStr = '';
+  if (data.headers) {
+    for (var key in data.headers) {
+      headersStr += key + ': ' + data.headers[key] + '\n';
+    }
+  }
+  document.getElementById('response-headers').textContent = headersStr || '(no headers)';
+
+  // Set body (pretty print JSON)
+  try {
+    var bodyObj = typeof data.body === 'string' ? JSON.parse(data.body) : data.body;
+    document.getElementById('response-body').textContent = JSON.stringify(bodyObj, null, 2);
+  } catch (e) {
+    document.getElementById('response-body').textContent = data.body || '(empty)';
+  }
+}
+
+function showError(message) {
+  document.getElementById('response-placeholder').classList.add('hidden');
+  document.getElementById('response-content').classList.add('hidden');
+  document.getElementById('response-meta').classList.add('hidden');
+  document.getElementById('response-error').classList.remove('hidden');
+  document.getElementById('error-message').textContent = message;
+}
+</script>
+{{ end }}

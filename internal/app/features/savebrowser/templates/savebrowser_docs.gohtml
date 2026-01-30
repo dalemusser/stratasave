@@ -1,0 +1,421 @@
+{{ define "savebrowser/docs" }}
+  {{ template "layout" . }}
+{{ end }}
+
+{{ define "content" }}
+<div class="flex flex-col h-full">
+  <!-- Header -->
+  <div class="mb-4 flex items-center">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">📖 States API Documentation</h1>
+  </div>
+
+  <!-- Documentation Content -->
+  <div class="flex-1 overflow-auto">
+    <div class="bg-white dark:bg-gray-800 rounded shadow p-6 space-y-8">
+
+      <!-- Overview -->
+      <section>
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">Overview</h2>
+        <p class="text-gray-700 dark:text-gray-300 mb-3">
+          The States API allows you to save and load game state data for users. Each save creates a new entry,
+          allowing you to maintain a history of save states. This is ideal for game saves, checkpoints,
+          or any versioned user data.
+        </p>
+        <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-3">
+          <p class="text-sm text-blue-700 dark:text-blue-300">
+            <strong>Note:</strong> Each save operation creates a new document. Use the <code>limit</code> parameter
+            when loading to retrieve multiple historical saves.
+          </p>
+        </div>
+      </section>
+
+      <!-- Endpoints -->
+      <section>
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">Endpoints</h2>
+
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-sm">
+            <thead class="bg-gray-100 dark:bg-gray-700">
+              <tr>
+                <th class="px-4 py-2 text-left text-gray-700 dark:text-gray-300">Operation</th>
+                <th class="px-4 py-2 text-left text-gray-700 dark:text-gray-300">New Endpoint</th>
+                <th class="px-4 py-2 text-left text-gray-700 dark:text-gray-300">Legacy Endpoint</th>
+                <th class="px-4 py-2 text-left text-gray-700 dark:text-gray-300">Method</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
+              <tr>
+                <td class="px-4 py-3 text-gray-900 dark:text-gray-100">Save State</td>
+                <td class="px-4 py-3"><code class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">/api/state/save</code></td>
+                <td class="px-4 py-3"><code class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">/save</code></td>
+                <td class="px-4 py-3"><span class="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded text-xs">POST</span></td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 text-gray-900 dark:text-gray-100">Load State</td>
+                <td class="px-4 py-3"><code class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">/api/state/load</code></td>
+                <td class="px-4 py-3"><code class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">/load</code></td>
+                <td class="px-4 py-3"><span class="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded text-xs">POST</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="mt-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded p-3">
+          <p class="text-sm text-yellow-700 dark:text-yellow-300">
+            <strong>Legacy Endpoints:</strong> The legacy endpoints (<code>/save</code>, <code>/load</code>) are still supported
+            for backward compatibility but may be deprecated in future versions. New integrations should use the new endpoints.
+          </p>
+        </div>
+      </section>
+
+      <!-- Authentication -->
+      <section class="mt-8">
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">Authentication</h2>
+        <p class="text-gray-700 dark:text-gray-300 mb-3">
+          All API requests require authentication using a Bearer token in the Authorization header.
+        </p>
+        <pre class="bg-gray-900 text-gray-100 p-4 rounded overflow-x-auto text-sm"><code>Authorization: Bearer YOUR_API_KEY</code></pre>
+      </section>
+
+      <!-- Save State -->
+      <section>
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">Save State</h2>
+
+        <h3 class="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2">Request Body</h3>
+        <pre class="bg-gray-900 text-gray-100 p-4 rounded overflow-x-auto text-sm mb-4"><code>{
+  "user_id": "string",      // Required: Unique user identifier
+  "game": "string",         // Required: Game identifier
+  "save_data": { }          // Required: JSON object containing save data
+}</code></pre>
+
+        <h3 class="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2">Response</h3>
+        <pre class="bg-gray-900 text-gray-100 p-4 rounded overflow-x-auto text-sm mb-4"><code>{
+  "id": "string",           // Unique save ID
+  "user_id": "string",
+  "game": "string",
+  "save_data": { },
+  "timestamp": "2024-01-15T10:30:00Z"
+}</code></pre>
+
+        <h3 class="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2">curl Example</h3>
+        <pre class="bg-gray-900 text-gray-100 p-4 rounded overflow-x-auto text-sm"><code>curl -X POST {{ .BaseURL }}/api/state/save \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    "user_id": "player123",
+    "game": "my-awesome-game",
+    "save_data": {
+      "level": 5,
+      "score": 12500,
+      "position": {"x": 100, "y": 50},
+      "inventory": ["sword", "shield", "potion"]
+    }
+  }'</code></pre>
+      </section>
+
+      <!-- Load State -->
+      <section>
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">Load State</h2>
+
+        <h3 class="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2">Request Body</h3>
+        <pre class="bg-gray-900 text-gray-100 p-4 rounded overflow-x-auto text-sm mb-4"><code>{
+  "user_id": "string",      // Required: Unique user identifier
+  "game": "string",         // Required: Game identifier
+  "limit": 1                // Optional: Number of saves to retrieve (default: 1)
+}</code></pre>
+
+        <h3 class="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2">Response</h3>
+        <pre class="bg-gray-900 text-gray-100 p-4 rounded overflow-x-auto text-sm mb-4"><code>{
+  "saves": [
+    {
+      "id": "string",
+      "user_id": "string",
+      "game": "string",
+      "save_data": { },
+      "timestamp": "2024-01-15T10:30:00Z"
+    }
+  ]
+}</code></pre>
+
+        <h3 class="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2">curl Example</h3>
+        <pre class="bg-gray-900 text-gray-100 p-4 rounded overflow-x-auto text-sm"><code># Load most recent save
+curl -X POST {{ .BaseURL }}/api/state/load \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    "user_id": "player123",
+    "game": "my-awesome-game"
+  }'
+
+# Load last 5 saves
+curl -X POST {{ .BaseURL }}/api/state/load \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    "user_id": "player123",
+    "game": "my-awesome-game",
+    "limit": 5
+  }'</code></pre>
+      </section>
+
+      <!-- Unity Integration -->
+      <section>
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">Unity Integration (C#)</h2>
+
+        <p class="text-gray-700 dark:text-gray-300 mb-4">
+          Below is a complete example of how to integrate the States API into a Unity game using C#.
+        </p>
+
+        <h3 class="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2">SaveManager.cs</h3>
+        <pre class="bg-gray-900 text-gray-100 p-4 rounded overflow-x-auto text-sm mb-4"><code>using System;
+using System.Collections;
+using System.Text;
+using UnityEngine;
+using UnityEngine.Networking;
+
+[Serializable]
+public class SaveData
+{
+    public int level;
+    public int score;
+    public Vector3Serializable position;
+    public string[] inventory;
+}
+
+[Serializable]
+public class Vector3Serializable
+{
+    public float x, y, z;
+
+    public Vector3Serializable(Vector3 v)
+    {
+        x = v.x; y = v.y; z = v.z;
+    }
+
+    public Vector3 ToVector3() => new Vector3(x, y, z);
+}
+
+[Serializable]
+public class SaveRequest
+{
+    public string user_id;
+    public string game;
+    public SaveData save_data;
+}
+
+[Serializable]
+public class LoadRequest
+{
+    public string user_id;
+    public string game;
+    public int limit;
+}
+
+[Serializable]
+public class SaveResponse
+{
+    public string id;
+    public string user_id;
+    public string game;
+    public SaveData save_data;
+    public string timestamp;
+}
+
+[Serializable]
+public class LoadResponse
+{
+    public SaveResponse[] saves;
+}
+
+public class SaveManager : MonoBehaviour
+{
+    [Header("API Configuration")]
+    [SerializeField] private string apiBaseUrl = "{{ .BaseURL }}";
+    [SerializeField] private string apiKey = "YOUR_API_KEY";
+    [SerializeField] private string gameId = "my-awesome-game";
+
+    private string userId;
+
+    void Start()
+    {
+        // Get or generate a unique user ID
+        userId = PlayerPrefs.GetString("UserId", Guid.NewGuid().ToString());
+        PlayerPrefs.SetString("UserId", userId);
+    }
+
+    // Save game state
+    public void SaveGame(SaveData data, Action&lt;bool, string&gt; callback)
+    {
+        StartCoroutine(SaveGameCoroutine(data, callback));
+    }
+
+    private IEnumerator SaveGameCoroutine(SaveData data, Action&lt;bool, string&gt; callback)
+    {
+        var request = new SaveRequest
+        {
+            user_id = userId,
+            game = gameId,
+            save_data = data
+        };
+
+        string json = JsonUtility.ToJson(request);
+        byte[] bodyRaw = Encoding.UTF8.GetBytes(json);
+
+        using (var www = new UnityWebRequest($"{apiBaseUrl}/api/state/save", "POST"))
+        {
+            www.uploadHandler = new UploadHandlerRaw(bodyRaw);
+            www.downloadHandler = new DownloadHandlerBuffer();
+            www.SetRequestHeader("Content-Type", "application/json");
+            www.SetRequestHeader("Authorization", $"Bearer {apiKey}");
+
+            yield return www.SendWebRequest();
+
+            if (www.result == UnityWebRequest.Result.Success)
+            {
+                var response = JsonUtility.FromJson&lt;SaveResponse&gt;(www.downloadHandler.text);
+                Debug.Log($"Game saved! ID: {response.id}");
+                callback?.Invoke(true, response.id);
+            }
+            else
+            {
+                Debug.LogError($"Save failed: {www.error}");
+                callback?.Invoke(false, www.error);
+            }
+        }
+    }
+
+    // Load game state
+    public void LoadGame(Action&lt;bool, SaveData&gt; callback, int limit = 1)
+    {
+        StartCoroutine(LoadGameCoroutine(callback, limit));
+    }
+
+    private IEnumerator LoadGameCoroutine(Action&lt;bool, SaveData&gt; callback, int limit)
+    {
+        var request = new LoadRequest
+        {
+            user_id = userId,
+            game = gameId,
+            limit = limit
+        };
+
+        string json = JsonUtility.ToJson(request);
+        byte[] bodyRaw = Encoding.UTF8.GetBytes(json);
+
+        using (var www = new UnityWebRequest($"{apiBaseUrl}/api/state/load", "POST"))
+        {
+            www.uploadHandler = new UploadHandlerRaw(bodyRaw);
+            www.downloadHandler = new DownloadHandlerBuffer();
+            www.SetRequestHeader("Content-Type", "application/json");
+            www.SetRequestHeader("Authorization", $"Bearer {apiKey}");
+
+            yield return www.SendWebRequest();
+
+            if (www.result == UnityWebRequest.Result.Success)
+            {
+                var response = JsonUtility.FromJson&lt;LoadResponse&gt;(www.downloadHandler.text);
+                if (response.saves != null && response.saves.Length > 0)
+                {
+                    Debug.Log("Game loaded successfully!");
+                    callback?.Invoke(true, response.saves[0].save_data);
+                }
+                else
+                {
+                    Debug.Log("No saves found");
+                    callback?.Invoke(false, null);
+                }
+            }
+            else
+            {
+                Debug.LogError($"Load failed: {www.error}");
+                callback?.Invoke(false, null);
+            }
+        }
+    }
+}</code></pre>
+
+        <h3 class="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2">Usage Example</h3>
+        <pre class="bg-gray-900 text-gray-100 p-4 rounded overflow-x-auto text-sm"><code>public class GameController : MonoBehaviour
+{
+    private SaveManager saveManager;
+
+    void Start()
+    {
+        saveManager = GetComponent&lt;SaveManager&gt;();
+    }
+
+    public void OnSaveButtonClicked()
+    {
+        var saveData = new SaveData
+        {
+            level = 5,
+            score = 12500,
+            position = new Vector3Serializable(transform.position),
+            inventory = new string[] { "sword", "shield", "potion" }
+        };
+
+        saveManager.SaveGame(saveData, (success, message) =>
+        {
+            if (success)
+                Debug.Log($"Saved with ID: {message}");
+            else
+                Debug.LogError($"Save failed: {message}");
+        });
+    }
+
+    public void OnLoadButtonClicked()
+    {
+        saveManager.LoadGame((success, data) =>
+        {
+            if (success && data != null)
+            {
+                // Restore game state
+                transform.position = data.position.ToVector3();
+                // ... restore other data
+            }
+        });
+    }
+}</code></pre>
+      </section>
+
+      <!-- Error Codes -->
+      <section>
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">Error Codes</h2>
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-sm">
+            <thead class="bg-gray-100 dark:bg-gray-700">
+              <tr>
+                <th class="px-4 py-2 text-left text-gray-700 dark:text-gray-300">Status Code</th>
+                <th class="px-4 py-2 text-left text-gray-700 dark:text-gray-300">Description</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
+              <tr>
+                <td class="px-4 py-3"><code class="text-green-600 dark:text-green-400">200 OK</code></td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300">Request successful</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3"><code class="text-green-600 dark:text-green-400">201 Created</code></td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300">Save created successfully</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3"><code class="text-yellow-600 dark:text-yellow-400">400 Bad Request</code></td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300">Invalid request body or missing required fields</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3"><code class="text-red-600 dark:text-red-400">401 Unauthorized</code></td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300">Missing or invalid API key</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3"><code class="text-red-600 dark:text-red-400">500 Internal Server Error</code></td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300">Server error - please try again</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+{{ end }}

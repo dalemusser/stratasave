@@ -5,8 +5,18 @@
 {{ define "content" }}
 <div class="flex flex-col h-full">
   <div class="mb-4 flex items-center justify-between">
-    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Request Ledger</h1>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Request Error Ledger</h1>
     <div class="flex items-center gap-2">
+      <!-- Timezone Selector -->
+      <select id="tz-select" class="text-sm border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded px-3 py-2">
+        {{ range .TimezoneGroups }}
+        <optgroup label="{{ .Region }}">
+          {{ range .Zones }}
+          <option value="{{ .ID }}">{{ .Label }}</option>
+          {{ end }}
+        </optgroup>
+        {{ end }}
+      </select>
       <a href="/ledger/stats" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm">View Stats</a>
     </div>
   </div>
@@ -18,6 +28,7 @@
     hx-target="#ledger-table"
     hx-swap="innerHTML"
     hx-push-url="true"
+    hx-trigger="change from:select, change from:input[type='date'], keyup changed delay:300ms from:#ledger-search"
     class="bg-white dark:bg-gray-800 rounded shadow p-3 mb-2 flex flex-wrap items-center gap-2"
   >
     <select name="method" class="px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
@@ -62,6 +73,7 @@
     />
 
     <input
+      id="ledger-search"
       type="text"
       name="search"
       value="{{ .Filter.Search }}"
@@ -69,7 +81,6 @@
       class="px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
     />
 
-    <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm">Filter</button>
     <a href="/ledger" class="px-4 py-2 border dark:border-gray-600 rounded text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">Clear</a>
   </form>
 
@@ -122,7 +133,9 @@
     <tbody>
       {{ range .Entries }}
       <tr class="border-b border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900/50">
-        <td class="px-4 py-3 align-middle text-xs whitespace-nowrap">{{ .StartedAt }}</td>
+        <td class="px-4 py-3 align-middle text-xs whitespace-nowrap">
+          <span class="tz-time" data-datetime="{{ .StartedAtISO }}">{{ .StartedAt }} UTC</span>
+        </td>
         <td class="px-4 py-3 align-middle">
           <span class="inline-flex items-center px-2 py-1 rounded text-xs font-mono
                        {{ if eq .Method "GET" }}bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-400
@@ -147,8 +160,8 @@
           <span class="{{ .StatusClass }} font-mono text-sm">{{ .StatusCode }}</span>
         </td>
         <td class="px-4 py-3 align-middle text-right font-mono text-xs text-gray-500 dark:text-gray-400">{{ .Duration }}</td>
-        <td class="px-4 py-3 align-middle">
-          <a href="/ledger/{{ .ID }}" class="text-indigo-600 dark:text-indigo-400 hover:underline text-xs">View</a>
+        <td class="px-4 py-3 align-middle text-right">
+          <a href="/ledger/{{ .ID }}" class="px-2 py-1 bg-indigo-600 text-white rounded text-xs hover:bg-indigo-700">View</a>
         </td>
       </tr>
       {{ else }}
@@ -159,4 +172,87 @@
     </tbody>
   </table>
 </div>
+
+<script>
+// Timezone handling
+(function() {
+  var tzSelect = document.getElementById('tz-select');
+  if (!tzSelect) return;
+
+  var STORAGE_KEY = 'ledger_timezone';
+
+  // Detect browser timezone
+  var browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  // Get stored timezone or use browser timezone
+  var storedTz = localStorage.getItem(STORAGE_KEY);
+  var currentTz = storedTz || browserTz;
+
+  // Find the closest match in our select options
+  function findTimezoneOption(tz) {
+    var options = tzSelect.options;
+    for (var i = 0; i < options.length; i++) {
+      if (options[i].value === tz) {
+        return tz;
+      }
+    }
+    // Try prefix match
+    var prefix = tz.split('/')[0];
+    for (var i = 0; i < options.length; i++) {
+      if (options[i].value.startsWith(prefix + '/')) {
+        return options[i].value;
+      }
+    }
+    // Default to UTC if no match
+    return 'UTC';
+  }
+
+  // Set initial selection
+  var selectedTz = findTimezoneOption(currentTz);
+  tzSelect.value = selectedTz;
+
+  // Format all timestamps in selected timezone
+  function formatTimestamps(tz) {
+    document.querySelectorAll('.tz-time').forEach(function(el) {
+      var iso = el.getAttribute('data-datetime');
+      if (!iso) return;
+
+      try {
+        var date = new Date(iso);
+        var formatted = date.toLocaleString('en-US', {
+          timeZone: tz,
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false,
+          timeZoneName: 'short'
+        });
+        el.textContent = formatted;
+      } catch (e) {
+        // Keep original text on error
+      }
+    });
+  }
+
+  // Initial format
+  formatTimestamps(selectedTz);
+
+  // Handle timezone changes
+  tzSelect.addEventListener('change', function() {
+    currentTz = tzSelect.value;
+    localStorage.setItem(STORAGE_KEY, currentTz);
+    formatTimestamps(currentTz);
+  });
+
+  // Re-format timestamps when HTMX swaps content
+  document.body.addEventListener('htmx:afterSwap', function(e) {
+    if (e.detail.target && e.detail.target.id === 'ledger-table') {
+      formatTimestamps(tzSelect.value);
+    }
+  });
+})();
+</script>
 {{ end }}

@@ -4,11 +4,17 @@ package bootstrap
 import (
 	"context"
 	"net/http"
+	"strconv"
 	"time"
 
 	activityfeature "github.com/dalemusser/stratasave/internal/app/features/activity"
+	apistatsfeature "github.com/dalemusser/stratasave/internal/app/features/apistats"
 	announcementsfeature "github.com/dalemusser/stratasave/internal/app/features/announcements"
 	apikeysfeature "github.com/dalemusser/stratasave/internal/app/features/apikeys"
+	saveapifeature "github.com/dalemusser/stratasave/internal/app/features/saveapi"
+	savebrowserfeature "github.com/dalemusser/stratasave/internal/app/features/savebrowser"
+	settingsapifeature "github.com/dalemusser/stratasave/internal/app/features/settingsapi"
+	settingsbrowserfeature "github.com/dalemusser/stratasave/internal/app/features/settingsbrowser"
 	auditlogfeature "github.com/dalemusser/stratasave/internal/app/features/auditlog"
 	authgooglefeature "github.com/dalemusser/stratasave/internal/app/features/authgoogle"
 	dashboardfeature "github.com/dalemusser/stratasave/internal/app/features/dashboard"
@@ -30,6 +36,10 @@ import (
 	systemusersfeature "github.com/dalemusser/stratasave/internal/app/features/systemusers"
 	appresources "github.com/dalemusser/stratasave/internal/app/resources"
 	"github.com/dalemusser/stratasave/internal/app/store/activity"
+	apistatsstore "github.com/dalemusser/stratasave/internal/app/store/apistats"
+	ledgerstore "github.com/dalemusser/stratasave/internal/app/store/ledger"
+	"github.com/dalemusser/stratasave/internal/app/system/apistats"
+	"github.com/dalemusser/stratasave/internal/app/system/ledger"
 	announcementstore "github.com/dalemusser/stratasave/internal/app/store/announcement"
 	"github.com/dalemusser/stratasave/internal/app/store/audit"
 	"github.com/dalemusser/stratasave/internal/app/store/oauthstate"
@@ -142,39 +152,43 @@ func BuildHandler(coreCfg *config.CoreConfig, appCfg AppConfig, deps DBDeps, log
 	// Create activity store for logging user events.
 	activityStore := activity.New(deps.MongoDatabase)
 
+	// Create API stats store and recorder for tracking API request statistics.
+	apiStatsStore := apistatsstore.New(deps.MongoDatabase)
+	apiStatsRecorder := apistats.NewRecorder(apiStatsStore, logger, appCfg.APIStatsBucket)
+
 	r := chi.NewRouter()
 
+	// ─────────────────────────────────────────────────────────────────────────────
+	// Global Middleware (applies to ALL routes)
+	// ─────────────────────────────────────────────────────────────────────────────
+
 	// Request timeout middleware: prevents requests from hanging indefinitely.
-	// Requests exceeding 30 seconds will be cancelled and return a 503 Service Unavailable.
 	r.Use(chimw.Timeout(30 * time.Second))
 
 	// CORS middleware: must be early in the chain to handle preflight requests.
-	// Only active when enable_cors=true in config.
 	r.Use(middleware.CORSFromConfig(coreCfg))
 
 	// Security headers middleware: adds X-Frame-Options, X-Content-Type-Options, etc.
-	// Enabled by default with secure values. Configure via enable_security_headers and related options.
 	r.Use(middleware.SecurityHeadersFromConfig(coreCfg))
 
-	// Global auth middleware: loads SessionUser into context if logged in.
-	// This makes the current user available to all handlers via auth.CurrentUser(r).
+	// Session middleware: loads SessionUser into context if logged in.
+	// API routes will simply have no session, which is fine.
 	r.Use(sessionMgr.LoadSessionUser)
 
-	// CSRF protection middleware: protects POST/PUT/DELETE requests from cross-site request forgery.
-	// The CSRF token must be included in forms as a hidden field or in the X-CSRF-Token header.
+	// CSRF protection middleware with path-based exemption for API routes.
 	csrfOpts := []csrf.Option{
 		csrf.Secure(secure),
 		csrf.Path("/"),
 		csrf.CookieName("csrf_token"),
 		csrf.FieldName("csrf_token"),
 		csrf.SameSite(csrf.SameSiteLaxMode),
-		csrf.ErrorHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		csrf.ErrorHandler(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			logger.Warn("CSRF validation failed",
-				zap.String("path", r.URL.Path),
-				zap.String("method", r.Method),
-				zap.String("reason", csrf.FailureReason(r).Error()),
+				zap.String("path", req.URL.Path),
+				zap.String("method", req.Method),
+				zap.String("reason", csrf.FailureReason(req).Error()),
 			)
-			if r.Header.Get("HX-Request") == "true" {
+			if req.Header.Get("HX-Request") == "true" {
 				w.Header().Set("HX-Redirect", "/login")
 				w.WriteHeader(http.StatusForbidden)
 				return
@@ -183,7 +197,6 @@ func BuildHandler(coreCfg *config.CoreConfig, appCfg AppConfig, deps DBDeps, log
 		})),
 	}
 	// In dev mode, trust localhost origins for CSRF validation.
-	// gorilla/csrf validates the Origin header's Host against TrustedOrigins (not the full URL).
 	trustedOrigins := []string{
 		"localhost:8080",
 		"localhost:3000",
@@ -193,20 +206,89 @@ func BuildHandler(coreCfg *config.CoreConfig, appCfg AppConfig, deps DBDeps, log
 	if !secure {
 		csrfOpts = append(csrfOpts, csrf.TrustedOrigins(trustedOrigins))
 	}
-	// Set CSRF cookie domain to match session domain when configured.
-	// This ensures CSRF cookie is shared across subdomains (if any).
 	if appCfg.SessionDomain != "" {
 		csrfOpts = append(csrfOpts, csrf.Domain(appCfg.SessionDomain))
 	}
-	csrfMiddleware := csrf.Protect([]byte(appCfg.CSRFKey), csrfOpts...)
+	csrfProtect := csrf.Protect([]byte(appCfg.CSRFKey), csrfOpts...)
+
+	// Wrap CSRF middleware to skip for API routes (they use API key auth or session auth with JS)
+	csrfMiddleware := func(next http.Handler) http.Handler {
+		csrfHandler := csrfProtect(next)
+		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			path := req.URL.Path
+			// Skip CSRF for:
+			// - Game API routes (use API key auth)
+			// - Heartbeat API (internal JS calls with session auth)
+			// - Invitation acceptance (the invitation token itself provides CSRF protection)
+			switch path {
+			case "/save", "/load", "/api/state/save", "/api/state/load", "/api/settings/save", "/api/settings/load", "/api/heartbeat", "/invite":
+				next.ServeHTTP(w, req)
+				return
+			}
+			csrfHandler.ServeHTTP(w, req)
+		})
+	}
 	r.Use(csrfMiddleware)
 
+	// ─────────────────────────────────────────────────────────────────────────────
+	// Routes
+	// ─────────────────────────────────────────────────────────────────────────────
+
+	// ─────────────────────────────────────────────────────────────────────────────
+	// API Error Ledger
+	// Logs API errors (status >= 400) for debugging integration issues.
+	// View errors at /ledger with filter for status >= 400.
+	// ─────────────────────────────────────────────────────────────────────────────
+	apiLedgerStore := ledgerstore.New(deps.MongoDatabase)
+	apiLedgerConfig := ledger.Config{
+		Store:          apiLedgerStore,
+		Logger:         logger,
+		MaxBodyPreview: 500,
+		HeadersToCapture: []string{
+			"Content-Type",
+			"Accept",
+			"User-Agent",
+			"X-Request-ID",
+		},
+		CaptureErrors: true,
+		OnlyErrors:    true, // Only log requests that result in errors (status >= 400)
+	}
+
+	// ─────────────────────────────────────────────────────────────────────────────
+	// Game State API Routes
+	// These routes use API key authentication. CSRF is handled above via path exemption.
+	// API errors are logged to the ledger for debugging.
+	// ─────────────────────────────────────────────────────────────────────────────
+	saveapiHandler := saveapifeature.NewHandler(deps.MongoDatabase, logger, appCfg.MaxSavesPerUser)
+
+	// New API endpoints: POST /api/state/save and POST /api/state/load
+	r.Route("/api/state", func(r chi.Router) {
+		r.Use(ledger.Middleware(apiLedgerConfig))
+		r.Mount("/", saveapifeature.Routes(saveapiHandler, apiStatsRecorder, appCfg.APIKey, logger))
+	})
+
+	// Legacy endpoints for backward compatibility: POST /save and POST /load
+	r.Route("/save", func(r chi.Router) {
+		r.Use(ledger.Middleware(apiLedgerConfig))
+		r.Mount("/", saveapifeature.LegacyRoutes(saveapiHandler, apiStatsRecorder, appCfg.APIKey, logger))
+	})
+	r.Route("/load", func(r chi.Router) {
+		r.Use(ledger.Middleware(apiLedgerConfig))
+		r.Mount("/", saveapifeature.LegacyLoadRoutes(saveapiHandler, apiStatsRecorder, appCfg.APIKey, logger))
+	})
+
+	// ─────────────────────────────────────────────────────────────────────────────
+	// Player Settings API Routes
+	// POST /api/settings/save and POST /api/settings/load
+	// API errors are logged to the ledger for debugging.
+	// ─────────────────────────────────────────────────────────────────────────────
+	settingsapiHandler := settingsapifeature.NewHandler(deps.MongoDatabase, logger)
+	r.Route("/api/settings", func(r chi.Router) {
+		r.Use(ledger.Middleware(apiLedgerConfig))
+		r.Mount("/", settingsapifeature.Routes(settingsapiHandler, apiStatsRecorder, appCfg.APIKey, logger))
+	})
+
 	// Health check endpoints for load balancers and orchestrators
-	// Provides:
-	//   /health      - full health check with service status
-	//   /health/ready, /health/live - sub-routes
-	//   /ready, /readyz - Kubernetes readiness probes (root level)
-	//   /livez       - Kubernetes liveness probe (root level)
 	healthHandler := healthfeature.NewHandler(deps.MongoClient, logger)
 	r.Mount("/health", healthfeature.Routes(healthHandler))
 	healthfeature.MountRootEndpoints(r, healthHandler)
@@ -277,7 +359,6 @@ func BuildHandler(coreCfg *config.CoreConfig, appCfg AppConfig, deps DBDeps, log
 		rateLimitStore,
 		appCfg.BaseURL,
 		appCfg.EmailVerifyExpiry,
-		googleEnabled,
 		trustLoginEnabled,
 		logger,
 	)
@@ -432,6 +513,36 @@ func BuildHandler(coreCfg *config.CoreConfig, appCfg AppConfig, deps DBDeps, log
 	// Statistics (admin and developer)
 	statsHandler := statsfeature.NewHandler(deps.MongoDatabase, errLog, logger)
 	r.Mount("/stats", statsfeature.Routes(statsHandler, sessionMgr))
+
+	// API Statistics (admin and developer)
+	apistatsHandler := apistatsfeature.NewHandler(deps.MongoDatabase, apiStatsStore, apiStatsRecorder, errLog, logger)
+	r.Mount("/console/api/stats", apistatsfeature.Routes(apistatsHandler, sessionMgr))
+
+	// State API Console (admin and developer)
+	// Parse max saves config (default to 10 for browser display)
+	stateBrowserLimit := 10
+	if appCfg.MaxSavesPerUser != "" && appCfg.MaxSavesPerUser != "all" {
+		if n, err := strconv.Atoi(appCfg.MaxSavesPerUser); err == nil && n > 0 {
+			stateBrowserLimit = n
+		}
+	}
+	stateBrowserHandler := savebrowserfeature.NewHandler(
+		deps.MongoDatabase,
+		errLog,
+		stateBrowserLimit,
+		appCfg.APIKey,
+		logger,
+	)
+	r.Mount("/console/api/state", savebrowserfeature.Routes(stateBrowserHandler, sessionMgr))
+
+	// Settings API Console (admin and developer)
+	settingsBrowserHandler := settingsbrowserfeature.NewHandler(
+		deps.MongoDatabase,
+		errLog,
+		appCfg.APIKey,
+		logger,
+	)
+	r.Mount("/console/api/settings", settingsbrowserfeature.Routes(settingsBrowserHandler, sessionMgr))
 
 	// 404 catch-all for unmatched routes
 	r.NotFound(errorsHandler.NotFound)

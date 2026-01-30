@@ -552,8 +552,10 @@ func (h *Handler) handleAccept(w http.ResponseWriter, r *http.Request) {
 	// Create user with email authentication
 	// Using direct create instead of check-then-create to avoid race conditions.
 	// MongoDB's unique index will prevent duplicates atomically.
+	// For email auth, login_id IS the email address (what they use to log in)
 	user, err := h.userStore.CreateFromInput(r.Context(), userstore.CreateInput{
 		FullName:   fullName,
+		LoginID:    inv.Email,
 		Email:      inv.Email,
 		AuthMethod: "email",
 		Role:       inv.Role,

@@ -105,13 +105,12 @@ func NewSessionManager(sessionKey, name, domain string, maxAge time.Duration, se
 		HttpOnly: true,
 	}
 
-	// SameSite handling: in prod with Secure cookies, we use None
-	// so cookies can be sent in cross-site contexts. In dev, Lax is fine.
-	if secure {
-		opts.SameSite = http.SameSiteNoneMode
-	} else {
-		opts.SameSite = http.SameSiteLaxMode
-	}
+	// SameSite=Lax is the recommended setting for first-party session cookies.
+	// It allows cookies on same-site requests and top-level navigations (like
+	// clicking a link from an email), while blocking cross-site POST requests.
+	// Note: SameSite=None is for third-party cookies (embeds, cross-site APIs)
+	// and can cause issues with browser privacy settings.
+	opts.SameSite = http.SameSiteLaxMode
 
 	store.Options = opts
 

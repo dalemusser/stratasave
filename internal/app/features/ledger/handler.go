@@ -11,6 +11,7 @@ import (
 	errorsfeature "github.com/dalemusser/stratasave/internal/app/features/errors"
 	ledgerstore "github.com/dalemusser/stratasave/internal/app/store/ledger"
 	"github.com/dalemusser/stratasave/internal/app/system/timeouts"
+	"github.com/dalemusser/stratasave/internal/app/system/timezones"
 	"github.com/dalemusser/stratasave/internal/app/system/viewdata"
 	"github.com/dalemusser/waffle/pantry/templates"
 	"github.com/go-chi/chi/v5"
@@ -105,16 +106,20 @@ func (h *Handler) ServeList(w http.ResponseWriter, r *http.Request) {
 		nextPage = result.TotalPages
 	}
 
-	base := viewdata.NewBaseVM(r, h.DB, "Request Ledger", "/dashboard")
+	// Load timezone groups
+	tzGroups, _ := timezones.Groups()
+
+	base := viewdata.NewBaseVM(r, h.DB, "Request Error Ledger", "/dashboard")
 	data := LedgerListVM{
-		BaseVM:     base,
-		Entries:    entries,
-		Filter:     filter,
-		Page:       result.Page,
-		TotalPages: result.TotalPages,
-		TotalCount: result.TotalCount,
-		PrevPage:   prevPage,
-		NextPage:   nextPage,
+		BaseVM:         base,
+		TimezoneGroups: tzGroups,
+		Entries:        entries,
+		Filter:         filter,
+		Page:           result.Page,
+		TotalPages:     result.TotalPages,
+		TotalCount:     result.TotalCount,
+		PrevPage:       prevPage,
+		NextPage:       nextPage,
 	}
 
 	// Handle HTMX partial render
@@ -150,10 +155,14 @@ func (h *Handler) ServeDetail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Load timezone groups
+	tzGroups, _ := timezones.Groups()
+
 	base := viewdata.NewBaseVM(r, h.DB, "Request Details", "/ledger")
 	data := LedgerDetailVM{
-		BaseVM: base,
-		Entry:  toLedgerEntryVM(*entry),
+		BaseVM:         base,
+		TimezoneGroups: tzGroups,
+		Entry:          toLedgerEntryVM(*entry),
 	}
 
 	templates.Render(w, r, "ledger/detail", data)
@@ -351,6 +360,7 @@ func toLedgerEntryVM(e ledgerstore.Entry) LedgerEntryVM {
 		RequestBodySize:    e.RequestBodySize,
 		RequestBodyHash:    e.RequestBodyHash,
 		RequestBodyPreview: e.RequestBodyPreview,
+		RequestBody:        e.RequestBody,
 		RequestContentType: e.RequestContentType,
 		StatusCode:         e.StatusCode,
 		ResponseSize:       e.ResponseSize,
@@ -363,6 +373,8 @@ func toLedgerEntryVM(e ledgerstore.Entry) LedgerEntryVM {
 		TotalMs:            e.Timing.TotalMs,
 		StartedAt:          e.StartedAt.Format("2006-01-02 15:04:05"),
 		CompletedAt:        e.CompletedAt.Format("2006-01-02 15:04:05"),
+		StartedAtISO:       e.StartedAt.UTC().Format("2006-01-02T15:04:05Z"),
+		CompletedAtISO:     e.CompletedAt.UTC().Format("2006-01-02T15:04:05Z"),
 		Duration:           fmt.Sprintf("%.2fms", e.Timing.TotalMs),
 		Metadata:           e.Metadata,
 		StatusClass:        getStatusClass(e.StatusCode),

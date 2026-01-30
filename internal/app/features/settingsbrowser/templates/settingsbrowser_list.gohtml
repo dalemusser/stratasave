@@ -1,0 +1,492 @@
+{{ define "settingsbrowser/list" }}
+  {{ template "layout" . }}
+{{ end }}
+
+{{ define "content" }}
+<div class="flex flex-col h-full">
+  <!-- Header -->
+  <div class="mb-4 flex items-center">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">🗂️ Settings Browser</h1>
+    <button onclick="showInfoModal()" class="ml-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" title="What is this?">
+      <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+      </svg>
+    </button>
+    <!-- Timezone selector - centered -->
+    <div class="flex-1 flex justify-center">
+      <select id="tz-select" style="width: 380px;" class="text-sm border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+        {{ range .TimezoneGroups }}
+        <optgroup label="{{ .Region }}">
+          {{ range .Zones }}
+          <option value="{{ .ID }}">{{ .Label }}</option>
+          {{ end }}
+        </optgroup>
+        {{ end }}
+      </select>
+    </div>
+    <div class="flex items-center gap-4">
+      {{ if .SelectedGame }}
+      <button type="button"
+              hx-get="/console/api/settings/game-picker?selected={{ .SelectedGame }}"
+              hx-target="#modal-root"
+              hx-swap="innerHTML"
+              class="px-3 py-2 border dark:border-gray-600 rounded text-sm text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 flex items-center gap-2">
+        <span>{{ .SelectedGame }}</span>
+        <span class="text-gray-400">▾</span>
+      </button>
+      {{ end }}
+      <button type="button"
+              onclick="showCreateModal()"
+              class="px-3 py-2 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700">
+        + Create Setting
+      </button>
+    </div>
+  </div>
+
+  {{ if .SelectedGame }}
+  <!-- Users Section -->
+  <section class="bg-white dark:bg-gray-800 rounded shadow mb-4 flex flex-col" style="max-height: 45vh;">
+    <div class="p-3 border-b dark:border-gray-700 flex items-center justify-between gap-4">
+      <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">Users</h2>
+      <form
+        hx-get="/console/api/settings/users?game={{ .SelectedGame }}"
+        hx-target="#users-section"
+        hx-swap="innerHTML"
+        hx-trigger="submit, keyup changed delay:300ms from:#user-search"
+        class="flex gap-2 flex-1 justify-end"
+      >
+        <input
+          id="user-search"
+          name="search"
+          type="text"
+          value="{{ .UserSearch }}"
+          placeholder="Search users..."
+          class="px-3 py-1 text-sm border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded focus:outline-none focus:ring-2 focus:ring-indigo-400 flex-1 max-w-md"
+        />
+        <a
+          href="/console/api/settings?game={{ .SelectedGame }}"
+          hx-get="/console/api/settings/users?game={{ .SelectedGame }}"
+          hx-target="#users-section"
+          hx-swap="innerHTML"
+          onclick="document.getElementById('user-search').value = '';"
+          class="px-3 py-1 border dark:border-gray-600 rounded text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+        >Clear</a>
+      </form>
+    </div>
+
+    <div id="users-section" class="flex-1 overflow-auto">
+      {{ template "settingsbrowser/users_content" . }}
+    </div>
+  </section>
+
+  <!-- Setting Section (only if user selected) -->
+  <section id="setting-section" class="bg-white dark:bg-gray-800 rounded shadow flex-1 flex flex-col min-h-0">
+    {{ template "settingsbrowser/setting_content" . }}
+  </section>
+  {{ else }}
+  <div class="bg-white dark:bg-gray-800 rounded shadow p-8 text-center">
+    <p class="text-gray-500 dark:text-gray-400">No games found in the database.</p>
+  </div>
+  {{ end }}
+</div>
+
+<!-- Modal Root -->
+<div id="modal-root"></div>
+
+<!-- Info Modal -->
+<div id="info-modal" class="hidden fixed inset-0 z-50">
+  <div class="fixed inset-0 bg-black/50" onclick="closeInfoModal()"></div>
+  <div class="fixed inset-0 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">About Settings Browser</h3>
+        <button onclick="closeInfoModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <div class="text-sm text-gray-600 dark:text-gray-400 space-y-3">
+        <p>The <strong>Settings Browser</strong> provides direct access to the MongoDB database for viewing and managing settings data.</p>
+        <p><strong>Key characteristics:</strong></p>
+        <ul class="list-disc pl-5 space-y-1">
+          <li>Reads and writes directly to the database</li>
+          <li>Bypasses the HTTP API layer entirely</li>
+          <li>Does not require API key authentication</li>
+          <li>Does not record API statistics</li>
+          <li>Useful for debugging and data inspection</li>
+        </ul>
+        <p class="text-xs text-gray-500 dark:text-gray-500 mt-4">For testing the full API stack including authentication and stats tracking, use the <strong>Playground</strong> instead.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="delete-modal" class="hidden fixed inset-0 z-50">
+  <div class="fixed inset-0 bg-black/50" onclick="closeDeleteModal()"></div>
+  <div class="fixed inset-0 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4" id="delete-modal-title">Confirm Delete</h3>
+      <p class="text-gray-600 dark:text-gray-400 mb-6" id="delete-modal-message">Are you sure you want to delete this setting?</p>
+      <div class="flex justify-end gap-3">
+        <button type="button" onclick="closeDeleteModal()" class="px-4 py-2 text-sm border dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
+        <button type="button" id="delete-confirm-btn" class="px-4 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Create Setting Modal -->
+<div id="create-modal" class="hidden fixed inset-0 z-50">
+  <div class="fixed inset-0 bg-black/50" onclick="closeCreateModal()"></div>
+  <div class="fixed inset-0 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl border-2 border-gray-500 max-w-lg w-full p-6">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Create Setting</h3>
+      <form id="create-form" hx-post="/console/api/settings/create" hx-swap="none">
+        <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Game</label>
+            <input type="text" name="game" id="create-game" required
+                   placeholder="Enter game name..."
+                   class="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">User ID</label>
+            <input type="text" name="user_id" id="create-user-id" required
+                   placeholder="Enter user ID..."
+                   class="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Settings Data (JSON)</label>
+            <textarea name="data" id="create-data" rows="6"
+                      placeholder='{"audio": 0.8, "graphics": "high"}'
+                      class="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-400"></textarea>
+          </div>
+        </div>
+        <div class="flex justify-end gap-3 mt-6">
+          <button type="button" onclick="closeCreateModal()" class="px-4 py-2 text-sm border dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
+          <button type="submit" class="px-4 py-2 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700">Create</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+// Info modal functions
+function showInfoModal() {
+  document.getElementById('info-modal').classList.remove('hidden');
+}
+
+function closeInfoModal() {
+  document.getElementById('info-modal').classList.add('hidden');
+}
+
+// Helper to get URL parameters (reads current state from URL, not stale template vars)
+function getUrlParam(name) {
+  var params = new URLSearchParams(window.location.search);
+  return params.get(name) || '';
+}
+
+let pendingDeleteUrl = null;
+
+function showDeleteModal(title, message, url) {
+  document.getElementById('delete-modal-title').textContent = title;
+  document.getElementById('delete-modal-message').textContent = message;
+  pendingDeleteUrl = url;
+  document.getElementById('delete-modal').classList.remove('hidden');
+}
+
+function closeDeleteModal() {
+  document.getElementById('delete-modal').classList.add('hidden');
+  pendingDeleteUrl = null;
+}
+
+document.getElementById('delete-confirm-btn').addEventListener('click', function() {
+  if (!pendingDeleteUrl) return;
+
+  var csrfToken = document.querySelector('meta[name="csrf-token"]');
+  var url = pendingDeleteUrl;
+
+  closeDeleteModal();
+
+  var headers = {
+    'Content-Type': 'application/x-www-form-urlencoded'
+  };
+  if (csrfToken) {
+    headers['X-CSRF-Token'] = csrfToken.content;
+  }
+
+  fetch(url, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: headers
+  }).then(function(response) {
+    if (!response.ok) {
+      throw new Error('Delete failed: ' + response.status);
+    }
+    // Dispatch the event to trigger refresh listener
+    document.body.dispatchEvent(new CustomEvent('setting-deleted'));
+  }).catch(function(err) {
+    alert('Failed to delete: ' + err.message);
+  });
+});
+
+// Listen for delete completion to refresh
+document.body.addEventListener('setting-deleted', function() {
+  var game = getUrlParam('game');
+  if (game) {
+    // Get current search value from the input field
+    var searchInput = document.getElementById('user-search');
+    var search = searchInput ? searchInput.value : '';
+    var url = '/console/api/settings/users?game=' + encodeURIComponent(game);
+    if (search) {
+      url += '&search=' + encodeURIComponent(search);
+    }
+    // Refresh users list and clear setting section
+    htmx.ajax('GET', url, {
+      target: '#users-section',
+      swap: 'innerHTML'
+    });
+    // Show the "select a user" message
+    document.getElementById('setting-section').innerHTML = '<div class="p-4 border-b dark:border-gray-700"><h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Setting</h2></div><p class="p-4 text-sm text-gray-500 dark:text-gray-400">Select a user to view their setting.</p>';
+  }
+});
+
+// Game picker functions
+function closeGamePicker() {
+  document.getElementById('modal-root').innerHTML = '';
+}
+
+function confirmGameSelection() {
+  const selected = document.querySelector('input[name="game-selection"]:checked');
+  if (selected) {
+    window.location.href = '/console/api/settings?game=' + encodeURIComponent(selected.value);
+  }
+  closeGamePicker();
+}
+
+// Create modal functions
+function showCreateModal() {
+  document.getElementById('create-game').value = '';
+  document.getElementById('create-user-id').value = '';
+  document.getElementById('create-data').value = '';
+  document.getElementById('create-modal').classList.remove('hidden');
+  document.getElementById('create-game').focus();
+}
+
+function closeCreateModal() {
+  document.getElementById('create-modal').classList.add('hidden');
+}
+
+// Listen for create completion
+document.body.addEventListener('setting-created', function(event) {
+  closeCreateModal();
+  // Get the game from the form and redirect to it
+  const createdGame = document.getElementById('create-game').value;
+  if (createdGame) {
+    window.location.href = '/console/api/settings?game=' + encodeURIComponent(createdGame);
+  } else {
+    window.location.reload();
+  }
+});
+
+// Timezone handling
+(function() {
+  var tzSelect = document.getElementById('tz-select');
+  if (!tzSelect) return;
+
+  var STORAGE_KEY = 'settings_browser_timezone';
+
+  // Detect browser timezone
+  var browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  // Get stored timezone or use browser timezone
+  var storedTz = localStorage.getItem(STORAGE_KEY);
+  var currentTz = storedTz || browserTz;
+
+  // Find the closest match in our select options
+  function findTimezoneOption(tz) {
+    var options = tzSelect.options;
+    for (var i = 0; i < options.length; i++) {
+      if (options[i].value === tz) {
+        return tz;
+      }
+    }
+    // If not found, try to find a match by region prefix
+    var parts = tz.split('/');
+    if (parts.length >= 2) {
+      var prefix = parts[0] + '/' + parts[1];
+      for (var i = 0; i < options.length; i++) {
+        if (options[i].value.startsWith(prefix)) {
+          return options[i].value;
+        }
+      }
+    }
+    // Default to UTC if no match
+    return 'UTC';
+  }
+
+  // Set initial selection
+  var selectedTz = findTimezoneOption(currentTz);
+  tzSelect.value = selectedTz;
+
+  // Format all timestamps in selected timezone
+  function formatTimestamps(tz) {
+    document.querySelectorAll('.tz-time').forEach(function(el) {
+      var iso = el.getAttribute('data-datetime');
+      if (!iso) return;
+
+      var date = new Date(iso);
+      if (isNaN(date.getTime())) return;
+
+      try {
+        var options = {
+          timeZone: tz,
+          year: 'numeric',
+          month: 'short',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false,
+          timeZoneName: 'short'
+        };
+        var formatted = date.toLocaleString('en-US', options);
+        // Reformat from "Jan 11, 2026, 15:03:46 PST" to "Jan 11, 2026 15:03:46 PST"
+        formatted = formatted.replace(/, (\d{2}:)/, ' $1');
+        el.textContent = formatted;
+        // Show the separators (opening and closing parens)
+        var parent = el.parentElement;
+        if (parent) {
+          parent.querySelectorAll('.tz-separator').forEach(function(sep) {
+            sep.classList.remove('hidden');
+          });
+        }
+      } catch (e) {
+        console.warn('Invalid timezone:', tz, e);
+      }
+    });
+  }
+
+  // Initial format
+  formatTimestamps(selectedTz);
+
+  // Handle timezone change
+  tzSelect.addEventListener('change', function() {
+    var tz = tzSelect.value;
+    localStorage.setItem(STORAGE_KEY, tz);
+    formatTimestamps(tz);
+  });
+
+  // Re-format after HTMX content swap
+  document.body.addEventListener('htmx:afterSwap', function(evt) {
+    if (evt.detail.target && (evt.detail.target.id === 'setting-section' || evt.detail.target.id === 'content')) {
+      formatTimestamps(tzSelect.value);
+    }
+  });
+})();
+</script>
+{{ end }}
+
+{{ define "settingsbrowser/users_content" }}
+<!-- Pagination info -->
+<div class="flex items-center justify-between mb-1 px-4 pt-3">
+  <span class="text-sm text-gray-600 dark:text-gray-400">
+    {{ if .UserTotal }}{{ .UserRangeStart }}-{{ .UserRangeEnd }} of {{ .UserTotal }}{{ else }}0 of 0{{ end }}
+  </span>
+  <div class="flex gap-2">
+    {{ if .UserHasPrev }}
+    <a hx-get="/console/api/settings/users?game={{ .SelectedGame }}&search={{ .UserSearch }}&page={{ .UserPrevPage }}"
+       hx-target="#users-section"
+       hx-swap="innerHTML"
+       class="px-2 py-1 border dark:border-gray-600 rounded text-xs text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">Prev</a>
+    {{ else }}
+    <span class="px-2 py-1 border dark:border-gray-600 rounded text-xs text-gray-400 dark:text-gray-500">Prev</span>
+    {{ end }}
+    {{ if .UserHasNext }}
+    <a hx-get="/console/api/settings/users?game={{ .SelectedGame }}&search={{ .UserSearch }}&page={{ .UserNextPage }}"
+       hx-target="#users-section"
+       hx-swap="innerHTML"
+       class="px-2 py-1 border dark:border-gray-600 rounded text-xs text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">Next</a>
+    {{ else }}
+    <span class="px-2 py-1 border dark:border-gray-600 rounded text-xs text-gray-400 dark:text-gray-500">Next</span>
+    {{ end }}
+  </div>
+</div>
+
+<!-- Table -->
+<div class="overflow-auto px-4 pb-3" style="max-height: calc(45vh - 140px);">
+  {{ if .Users }}
+  <table class="min-w-full text-sm">
+    <thead class="bg-gray-100 dark:bg-gray-700 sticky top-0">
+      <tr class="border-b border-gray-300 dark:border-gray-600">
+        <th class="px-4 py-3 text-left text-gray-600 dark:text-gray-400 uppercase text-xs">User ID</th>
+        <th class="px-4 py-3 text-right text-gray-600 dark:text-gray-400 uppercase text-xs">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{ range .Users }}
+      <tr hx-get="/console/api/settings/data?game={{ $.SelectedGame }}&user={{ . }}"
+          hx-target="#setting-section"
+          hx-swap="innerHTML"
+          hx-push-url="/console/api/settings?game={{ $.SelectedGame }}&user={{ . }}"
+          class="border-b border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900/50 cursor-pointer {{ if eq . $.SelectedUser }}bg-indigo-50 dark:bg-indigo-900/20{{ end }}">
+        <td class="px-4 py-3 text-gray-900 dark:text-gray-100">
+          <div class="truncate max-w-md" title="{{ . }}">{{ . }}</div>
+        </td>
+        <td class="px-4 py-3 text-right">
+          <span class="px-2 py-1 bg-indigo-600 text-white rounded text-xs">View</span>
+        </td>
+      </tr>
+      {{ end }}
+    </tbody>
+  </table>
+  {{ else }}
+  <p class="text-sm text-gray-500 dark:text-gray-400 py-4">No users found{{ if .UserSearch }} matching "{{ .UserSearch }}"{{ end }}.</p>
+  {{ end }}
+</div>
+{{ end }}
+
+{{ define "settingsbrowser/setting_content" }}
+<div class="p-3 border-b dark:border-gray-700 flex flex-wrap items-center justify-between gap-2">
+  <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300">
+    Setting
+    {{ if .SelectedUser }}<span class="font-normal text-gray-500 dark:text-gray-400">for {{ .SelectedUser }}</span>{{ end }}
+  </h2>
+  {{ if and .SelectedGame .SelectedUser .Setting }}
+  <button type="button"
+          onclick="showDeleteModal('Delete Setting', 'Are you sure you want to delete this setting? This cannot be undone.', '/console/api/settings/{{ .SelectedGame }}/user/{{ .SelectedUser }}/delete')"
+          class="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700">
+    Delete
+  </button>
+  {{ end }}
+</div>
+
+<div class="flex-1 overflow-auto">
+{{ if and .SelectedGame .SelectedUser }}
+  {{ if .Setting }}
+  <div class="p-4">
+    <div class="mb-3 text-sm text-gray-600 dark:text-gray-400">
+      Last updated: <span class="tz-time" data-datetime="{{ .Setting.Timestamp.Format "2006-01-02T15:04:05Z" }}"></span><span class="tz-separator hidden"> (</span><span class="tz-utc">{{ .Setting.Timestamp.Format "Jan 02, 2006 15:04:05" }} UTC</span><span class="tz-separator hidden">)</span>
+    </div>
+    <details class="group" open>
+      <summary class="cursor-pointer text-xs text-indigo-600 dark:text-indigo-400 hover:underline">
+        <span class="group-open:hidden">Show setting data</span>
+        <span class="hidden group-open:inline">Hide setting data</span>
+      </summary>
+      <pre class="mt-2 p-3 text-xs bg-gray-50 dark:bg-gray-900 rounded overflow-auto max-h-64 text-gray-800 dark:text-gray-200">{{ .Setting.SettingsData }}</pre>
+    </details>
+  </div>
+  {{ else }}
+  <p class="p-4 text-sm text-gray-500 dark:text-gray-400">No setting found for this user.</p>
+  {{ end }}
+{{ else if .SelectedGame }}
+<p class="p-4 text-sm text-gray-500 dark:text-gray-400">Select a user to view their setting.</p>
+{{ else }}
+<p class="p-4 text-sm text-gray-500 dark:text-gray-400">Select a game and user to view settings.</p>
+{{ end }}
+</div>
+{{ end }}

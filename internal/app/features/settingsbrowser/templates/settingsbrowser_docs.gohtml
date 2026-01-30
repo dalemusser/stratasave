@@ -1,0 +1,466 @@
+{{ define "settingsbrowser/docs" }}
+  {{ template "layout" . }}
+{{ end }}
+
+{{ define "content" }}
+<div class="flex flex-col h-full">
+  <!-- Header -->
+  <div class="mb-4 flex items-center">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">📖 Settings API Documentation</h1>
+  </div>
+
+  <!-- Documentation Content -->
+  <div class="flex-1 overflow-auto">
+    <div class="bg-white dark:bg-gray-800 rounded shadow p-6 space-y-8">
+
+      <!-- Overview -->
+      <section>
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">Overview</h2>
+        <p class="text-gray-700 dark:text-gray-300 mb-3">
+          The Settings API allows you to save and load user settings/preferences. Unlike the States API,
+          settings are stored as a single document per user per game - saving will update (upsert) the existing
+          settings rather than creating a new entry.
+        </p>
+        <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-3">
+          <p class="text-sm text-blue-700 dark:text-blue-300">
+            <strong>Note:</strong> Settings use an upsert pattern - if settings exist for a user/game combination,
+            they will be updated. If not, new settings will be created.
+          </p>
+        </div>
+      </section>
+
+      <!-- Endpoints -->
+      <section>
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">Endpoints</h2>
+
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-sm">
+            <thead class="bg-gray-100 dark:bg-gray-700">
+              <tr>
+                <th class="px-4 py-2 text-left text-gray-700 dark:text-gray-300">Operation</th>
+                <th class="px-4 py-2 text-left text-gray-700 dark:text-gray-300">Endpoint</th>
+                <th class="px-4 py-2 text-left text-gray-700 dark:text-gray-300">Method</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
+              <tr>
+                <td class="px-4 py-3 text-gray-900 dark:text-gray-100">Save Settings</td>
+                <td class="px-4 py-3"><code class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">/api/settings/save</code></td>
+                <td class="px-4 py-3"><span class="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded text-xs">POST</span></td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 text-gray-900 dark:text-gray-100">Load Settings</td>
+                <td class="px-4 py-3"><code class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">/api/settings/load</code></td>
+                <td class="px-4 py-3"><span class="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded text-xs">POST</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Authentication -->
+      <section>
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">Authentication</h2>
+        <p class="text-gray-700 dark:text-gray-300 mb-3">
+          All API requests require authentication using a Bearer token in the Authorization header.
+        </p>
+        <pre class="bg-gray-900 text-gray-100 p-4 rounded overflow-x-auto text-sm"><code>Authorization: Bearer YOUR_API_KEY</code></pre>
+      </section>
+
+      <!-- Save Settings -->
+      <section>
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">Save Settings</h2>
+
+        <h3 class="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2">Request Body</h3>
+        <pre class="bg-gray-900 text-gray-100 p-4 rounded overflow-x-auto text-sm mb-4"><code>{
+  "user_id": "string",         // Required: Unique user identifier
+  "game": "string",            // Required: Game identifier
+  "settings_data": { }         // Required: JSON object containing settings
+}</code></pre>
+
+        <h3 class="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2">Response</h3>
+        <pre class="bg-gray-900 text-gray-100 p-4 rounded overflow-x-auto text-sm mb-4"><code>{
+  "id": "string",              // Settings document ID
+  "user_id": "string",
+  "game": "string",
+  "settings_data": { },
+  "timestamp": "2024-01-15T10:30:00Z"
+}</code></pre>
+
+        <h3 class="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2">curl Example</h3>
+        <pre class="bg-gray-900 text-gray-100 p-4 rounded overflow-x-auto text-sm"><code>curl -X POST {{ .BaseURL }}/api/settings/save \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    "user_id": "player123",
+    "game": "my-awesome-game",
+    "settings_data": {
+      "audio_volume": 0.8,
+      "music_volume": 0.6,
+      "graphics_quality": "high",
+      "language": "en",
+      "notifications": true,
+      "controls": {
+        "invert_y": false,
+        "sensitivity": 1.5
+      }
+    }
+  }'</code></pre>
+      </section>
+
+      <!-- Load Settings -->
+      <section>
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">Load Settings</h2>
+
+        <h3 class="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2">Request Body</h3>
+        <pre class="bg-gray-900 text-gray-100 p-4 rounded overflow-x-auto text-sm mb-4"><code>{
+  "user_id": "string",         // Required: Unique user identifier
+  "game": "string"             // Required: Game identifier
+}</code></pre>
+
+        <h3 class="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2">Response</h3>
+        <pre class="bg-gray-900 text-gray-100 p-4 rounded overflow-x-auto text-sm mb-4"><code>{
+  "id": "string",
+  "user_id": "string",
+  "game": "string",
+  "settings_data": { },
+  "timestamp": "2024-01-15T10:30:00Z"
+}</code></pre>
+
+        <h3 class="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2">curl Example</h3>
+        <pre class="bg-gray-900 text-gray-100 p-4 rounded overflow-x-auto text-sm"><code>curl -X POST {{ .BaseURL }}/api/settings/load \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    "user_id": "player123",
+    "game": "my-awesome-game"
+  }'</code></pre>
+      </section>
+
+      <!-- Unity Integration -->
+      <section>
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">Unity Integration (C#)</h2>
+
+        <p class="text-gray-700 dark:text-gray-300 mb-4">
+          Below is a complete example of how to integrate the Settings API into a Unity game using C#.
+        </p>
+
+        <h3 class="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2">SettingsManager.cs</h3>
+        <pre class="bg-gray-900 text-gray-100 p-4 rounded overflow-x-auto text-sm mb-4"><code>using System;
+using System.Collections;
+using System.Text;
+using UnityEngine;
+using UnityEngine.Networking;
+
+[Serializable]
+public class GameSettings
+{
+    public float audio_volume = 1.0f;
+    public float music_volume = 1.0f;
+    public string graphics_quality = "medium";
+    public string language = "en";
+    public bool notifications = true;
+    public ControlSettings controls = new ControlSettings();
+}
+
+[Serializable]
+public class ControlSettings
+{
+    public bool invert_y = false;
+    public float sensitivity = 1.0f;
+}
+
+[Serializable]
+public class SettingsSaveRequest
+{
+    public string user_id;
+    public string game;
+    public GameSettings settings_data;
+}
+
+[Serializable]
+public class SettingsLoadRequest
+{
+    public string user_id;
+    public string game;
+}
+
+[Serializable]
+public class SettingsResponse
+{
+    public string id;
+    public string user_id;
+    public string game;
+    public GameSettings settings_data;
+    public string timestamp;
+}
+
+public class SettingsManager : MonoBehaviour
+{
+    [Header("API Configuration")]
+    [SerializeField] private string apiBaseUrl = "{{ .BaseURL }}";
+    [SerializeField] private string apiKey = "YOUR_API_KEY";
+    [SerializeField] private string gameId = "my-awesome-game";
+
+    [Header("Current Settings")]
+    public GameSettings currentSettings = new GameSettings();
+
+    private string userId;
+
+    public static SettingsManager Instance { get; private set; }
+
+    void Awake()
+    {
+        if (Instance == null)
+        {
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
+    }
+
+    void Start()
+    {
+        userId = PlayerPrefs.GetString("UserId", Guid.NewGuid().ToString());
+        PlayerPrefs.SetString("UserId", userId);
+
+        // Load settings on start
+        LoadSettings(null);
+    }
+
+    // Save settings to server
+    public void SaveSettings(Action&lt;bool&gt; callback = null)
+    {
+        StartCoroutine(SaveSettingsCoroutine(callback));
+    }
+
+    private IEnumerator SaveSettingsCoroutine(Action&lt;bool&gt; callback)
+    {
+        var request = new SettingsSaveRequest
+        {
+            user_id = userId,
+            game = gameId,
+            settings_data = currentSettings
+        };
+
+        string json = JsonUtility.ToJson(request);
+        byte[] bodyRaw = Encoding.UTF8.GetBytes(json);
+
+        using (var www = new UnityWebRequest($"{apiBaseUrl}/api/settings/save", "POST"))
+        {
+            www.uploadHandler = new UploadHandlerRaw(bodyRaw);
+            www.downloadHandler = new DownloadHandlerBuffer();
+            www.SetRequestHeader("Content-Type", "application/json");
+            www.SetRequestHeader("Authorization", $"Bearer {apiKey}");
+
+            yield return www.SendWebRequest();
+
+            if (www.result == UnityWebRequest.Result.Success)
+            {
+                Debug.Log("Settings saved successfully!");
+                callback?.Invoke(true);
+            }
+            else
+            {
+                Debug.LogError($"Failed to save settings: {www.error}");
+                callback?.Invoke(false);
+            }
+        }
+    }
+
+    // Load settings from server
+    public void LoadSettings(Action&lt;bool&gt; callback)
+    {
+        StartCoroutine(LoadSettingsCoroutine(callback));
+    }
+
+    private IEnumerator LoadSettingsCoroutine(Action&lt;bool&gt; callback)
+    {
+        var request = new SettingsLoadRequest
+        {
+            user_id = userId,
+            game = gameId
+        };
+
+        string json = JsonUtility.ToJson(request);
+        byte[] bodyRaw = Encoding.UTF8.GetBytes(json);
+
+        using (var www = new UnityWebRequest($"{apiBaseUrl}/api/settings/load", "POST"))
+        {
+            www.uploadHandler = new UploadHandlerRaw(bodyRaw);
+            www.downloadHandler = new DownloadHandlerBuffer();
+            www.SetRequestHeader("Content-Type", "application/json");
+            www.SetRequestHeader("Authorization", $"Bearer {apiKey}");
+
+            yield return www.SendWebRequest();
+
+            if (www.result == UnityWebRequest.Result.Success)
+            {
+                var response = JsonUtility.FromJson&lt;SettingsResponse&gt;(www.downloadHandler.text);
+                if (response.settings_data != null)
+                {
+                    currentSettings = response.settings_data;
+                    ApplySettings();
+                    Debug.Log("Settings loaded successfully!");
+                    callback?.Invoke(true);
+                }
+                else
+                {
+                    Debug.Log("No settings found, using defaults");
+                    callback?.Invoke(false);
+                }
+            }
+            else
+            {
+                Debug.LogError($"Failed to load settings: {www.error}");
+                callback?.Invoke(false);
+            }
+        }
+    }
+
+    // Apply settings to the game
+    private void ApplySettings()
+    {
+        AudioListener.volume = currentSettings.audio_volume;
+        // Apply other settings as needed...
+    }
+}</code></pre>
+
+        <h3 class="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2">Usage Example</h3>
+        <pre class="bg-gray-900 text-gray-100 p-4 rounded overflow-x-auto text-sm"><code>public class SettingsUI : MonoBehaviour
+{
+    [SerializeField] private Slider volumeSlider;
+    [SerializeField] private Dropdown qualityDropdown;
+    [SerializeField] private Toggle notificationsToggle;
+
+    void Start()
+    {
+        // Initialize UI with current settings
+        var settings = SettingsManager.Instance.currentSettings;
+        volumeSlider.value = settings.audio_volume;
+        notificationsToggle.isOn = settings.notifications;
+    }
+
+    public void OnVolumeChanged(float value)
+    {
+        SettingsManager.Instance.currentSettings.audio_volume = value;
+    }
+
+    public void OnNotificationsChanged(bool value)
+    {
+        SettingsManager.Instance.currentSettings.notifications = value;
+    }
+
+    public void OnSaveButtonClicked()
+    {
+        SettingsManager.Instance.SaveSettings(success =>
+        {
+            if (success)
+                Debug.Log("Settings saved!");
+            else
+                Debug.LogError("Failed to save settings");
+        });
+    }
+
+    public void OnResetButtonClicked()
+    {
+        SettingsManager.Instance.LoadSettings(success =>
+        {
+            if (success)
+            {
+                // Refresh UI
+                var settings = SettingsManager.Instance.currentSettings;
+                volumeSlider.value = settings.audio_volume;
+                notificationsToggle.isOn = settings.notifications;
+            }
+        });
+    }
+}</code></pre>
+      </section>
+
+      <!-- States vs Settings -->
+      <section>
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">States API vs Settings API</h2>
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-sm">
+            <thead class="bg-gray-100 dark:bg-gray-700">
+              <tr>
+                <th class="px-4 py-2 text-left text-gray-700 dark:text-gray-300">Feature</th>
+                <th class="px-4 py-2 text-left text-gray-700 dark:text-gray-300">States API</th>
+                <th class="px-4 py-2 text-left text-gray-700 dark:text-gray-300">Settings API</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
+              <tr>
+                <td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">Storage Pattern</td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300">Multiple documents (history)</td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300">Single document (upsert)</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">Use Case</td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300">Game saves, checkpoints</td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300">User preferences, options</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">Load Behavior</td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300">Returns array of saves</td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300">Returns single settings object</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">Save Behavior</td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300">Creates new document</td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300">Updates existing or creates new</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Error Codes -->
+      <section>
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">Error Codes</h2>
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-sm">
+            <thead class="bg-gray-100 dark:bg-gray-700">
+              <tr>
+                <th class="px-4 py-2 text-left text-gray-700 dark:text-gray-300">Status Code</th>
+                <th class="px-4 py-2 text-left text-gray-700 dark:text-gray-300">Description</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
+              <tr>
+                <td class="px-4 py-3"><code class="text-green-600 dark:text-green-400">200 OK</code></td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300">Request successful</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3"><code class="text-green-600 dark:text-green-400">201 Created</code></td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300">Settings created/updated successfully</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3"><code class="text-yellow-600 dark:text-yellow-400">400 Bad Request</code></td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300">Invalid request body or missing required fields</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3"><code class="text-red-600 dark:text-red-400">401 Unauthorized</code></td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300">Missing or invalid API key</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3"><code class="text-red-600 dark:text-red-400">404 Not Found</code></td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300">No settings found for user/game (on load)</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3"><code class="text-red-600 dark:text-red-400">500 Internal Server Error</code></td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300">Server error - please try again</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+{{ end }}

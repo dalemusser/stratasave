@@ -1,0 +1,82 @@
+{{ define "settingsbrowser/game_picker" }}
+<div class="fixed inset-0 z-50 flex items-center justify-center">
+  <div class="absolute inset-0 bg-black/40" onclick="closeGamePicker()"></div>
+  <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-300 dark:border-gray-600 max-w-lg w-full p-4 space-y-3" style="max-height: 80vh; display: flex; flex-direction: column;">
+    <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Select Game</h2>
+
+    <!-- Search -->
+    <form
+      hx-get="/console/api/settings/game-picker"
+      hx-target="#game-list"
+      hx-swap="innerHTML"
+      hx-trigger="submit, keyup changed delay:300ms from:#game-search"
+      class="flex gap-2"
+    >
+      <!-- Preserve selected across searches -->
+      <input type="hidden" name="selected" value="{{ .SelectedID }}">
+      <input
+        id="game-search"
+        name="q"
+        type="text"
+        placeholder="Search games..."
+        value="{{ .Query }}"
+        class="flex-1 px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+      />
+      <a
+        href="#"
+        hx-get="/console/api/settings/game-picker?selected={{ .SelectedID }}"
+        hx-target="#game-list"
+        hx-swap="innerHTML"
+        class="px-3 py-2 border dark:border-gray-600 rounded text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+      >Clear</a>
+    </form>
+
+    <!-- Game list (scrollable) -->
+    <div id="game-list" class="flex-1 overflow-y-auto" style="min-height: 200px; max-height: 400px;">
+      {{ template "settingsbrowser/game_picker_list" . }}
+    </div>
+
+    <!-- Actions -->
+    <div class="flex justify-between pt-2 border-t dark:border-gray-700">
+      <button
+        type="button"
+        class="px-4 py-2 border dark:border-gray-600 rounded text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+        onclick="closeGamePicker()"
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        class="px-4 py-2 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700"
+        onclick="confirmGameSelection()"
+      >
+        Done
+      </button>
+    </div>
+  </div>
+</div>
+{{ end }}
+
+{{ define "settingsbrowser/game_picker_list" }}
+<!-- Games with radio buttons -->
+<div class="divide-y divide-gray-200 dark:divide-gray-700">
+  {{ range .Games }}
+  <label class="flex items-center gap-3 px-2 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
+    <input
+      type="radio"
+      name="game-selection"
+      class="game-radio h-4 w-4 text-indigo-600 border-gray-300 dark:border-gray-600 focus:ring-indigo-500"
+      value="{{ .Name }}"
+      {{ if .Selected }}checked{{ end }}
+    />
+    <div class="flex-1 min-w-0">
+      <div class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{{ .Name }}</div>
+    </div>
+  </label>
+  {{ else }}
+  <div class="px-2 py-4 text-center text-gray-500 dark:text-gray-400 text-sm">
+    No games found.
+  </div>
+  {{ end }}
+</div>
+{{ end }}

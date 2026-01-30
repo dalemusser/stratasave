@@ -97,4 +97,10 @@ type AppConfig struct {
 	// Admin seeding configuration
 	SeedAdminEmail string // Email of the admin user to create on startup (if set)
 	SeedAdminName  string // Name of the admin user to create on startup
+
+	// Save retention configuration
+	MaxSavesPerUser string // Max saves per user per game ("all" or a number like "5")
+
+	// API stats configuration
+	APIStatsBucket time.Duration // Bucket duration for API stats (default: 1h)
 }

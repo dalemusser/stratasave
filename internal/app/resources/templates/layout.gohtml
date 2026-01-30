@@ -106,6 +106,39 @@
         transform: rotate(180deg);
       }
 
+      /* Submenu styles */
+      .submenu-items {
+        margin-left: 1.5rem;
+        margin-top: 0.25rem;
+        padding-bottom: 0.25rem;
+      }
+      .submenu-items a {
+        display: flex;
+        align-items: center;
+        padding: 0.25rem 0;
+        font-size: 0.8125rem;
+      }
+      .submenu-arrow {
+        margin-left: auto;
+        font-size: 0.75rem;
+        transition: transform 0.2s ease-in-out;
+      }
+      .submenu-arrow.expanded {
+        transform: rotate(90deg);
+      }
+      .submenu-toggle {
+        cursor: pointer;
+        width: 100%;
+        text-align: left;
+        background: none;
+        border: none;
+        padding: 0;
+      }
+      #sidebar.collapsed .submenu-items,
+      #sidebar.collapsed .submenu-arrow {
+        display: none;
+      }
+
       /* Announcement banner styles */
       .announcement-banner {
         font-size: 0.875rem;
@@ -282,6 +315,58 @@
             localStorage.setItem(storageKey, sidebar.classList.contains('collapsed'));
           });
         }
+      })();
+
+      // Submenu toggle
+      window.toggleSubmenu = function(id) {
+        var submenu = document.getElementById(id + '-submenu');
+        var arrow = event.currentTarget.querySelector('.submenu-arrow');
+        if (!submenu) return;
+
+        var isHidden = submenu.classList.contains('hidden');
+        submenu.classList.toggle('hidden');
+        if (arrow) {
+          arrow.classList.toggle('expanded', isHidden);
+        }
+        localStorage.setItem('submenu-' + id, isHidden ? 'open' : 'closed');
+      };
+
+      // Auto-expand submenus based on current path
+      (function() {
+        var path = window.location.pathname;
+
+        // State API submenu
+        if (path.startsWith('/console/api/state')) {
+          var stateSubmenu = document.getElementById('state-api-submenu');
+          var stateArrow = document.querySelector('[onclick*="state-api"] .submenu-arrow');
+          if (stateSubmenu) {
+            stateSubmenu.classList.remove('hidden');
+            if (stateArrow) stateArrow.classList.add('expanded');
+          }
+        }
+
+        // Settings API submenu
+        if (path.startsWith('/console/api/settings')) {
+          var settingsSubmenu = document.getElementById('settings-api-submenu');
+          var settingsArrow = document.querySelector('[onclick*="settings-api"] .submenu-arrow');
+          if (settingsSubmenu) {
+            settingsSubmenu.classList.remove('hidden');
+            if (settingsArrow) settingsArrow.classList.add('expanded');
+          }
+        }
+
+        // Restore submenu state from localStorage for other submenus
+        ['state-api', 'settings-api'].forEach(function(id) {
+          var state = localStorage.getItem('submenu-' + id);
+          if (state === 'open') {
+            var submenu = document.getElementById(id + '-submenu');
+            var arrow = document.querySelector('[onclick*="' + id + '"] .submenu-arrow');
+            if (submenu && !path.startsWith('/console/api/' + id.replace('-api', ''))) {
+              submenu.classList.remove('hidden');
+              if (arrow) arrow.classList.add('expanded');
+            }
+          }
+        });
       })();
 
       // Dark mode toggle

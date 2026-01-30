@@ -36,6 +36,7 @@ type Entry struct {
 	RequestBodySize    int64  `bson:"request_body_size"`
 	RequestBodyHash    string `bson:"request_body_hash,omitempty"`    // SHA256 first 8 chars
 	RequestBodyPreview string `bson:"request_body_preview,omitempty"` // First 500 chars
+	RequestBody        string `bson:"request_body,omitempty"`         // Full body (only saved on errors)
 	RequestContentType string `bson:"request_content_type,omitempty"`
 
 	// Response metadata

@@ -29,10 +29,42 @@
   <a class="menu-link flex items-center text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400" href="/audit" title="Audit Log"><span class="menu-icon mr-2">📋</span><span class="menu-text">Audit Log</span></a>
   <a class="menu-link flex items-center text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400" href="/dashboard/sessions" title="Active Sessions"><span class="menu-icon mr-2">🖥️</span><span class="menu-text">Sessions</span></a>
   <a class="menu-link flex items-center text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400" href="/activity" title="Activity Dashboard"><span class="menu-icon mr-2">📊</span><span class="menu-text">Activity</span></a>
-  <a class="menu-link flex items-center text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400" href="/ledger" title="Request Ledger"><span class="menu-icon mr-2">📝</span><span class="menu-text">Ledger</span></a>
+  <a class="menu-link flex items-center text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400" href="/ledger" title="Request Error Ledger"><span class="menu-icon mr-2">📝</span><span class="menu-text">Error Ledger</span></a>
   <a class="menu-link flex items-center text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400" href="/api-keys" title="API Keys"><span class="menu-icon mr-2">🔑</span><span class="menu-text">API Keys</span></a>
   <a class="menu-link flex items-center text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400" href="/jobs" title="Job Queue"><span class="menu-icon mr-2">⚡</span><span class="menu-text">Jobs</span></a>
   <a class="menu-link flex items-center text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400" href="/stats" title="Statistics"><span class="menu-icon mr-2">📈</span><span class="menu-text">Stats</span></a>
+
+  <!-- States API submenu -->
+  <div class="submenu-group">
+    <button class="menu-link submenu-toggle flex items-center text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400" onclick="toggleSubmenu('state-api')" title="States API">
+      <span class="menu-icon mr-2">💾</span>
+      <span class="menu-text">States API</span>
+      <span class="menu-text submenu-arrow">▸</span>
+    </button>
+    <div id="state-api-submenu" class="submenu-items hidden">
+      <a class="menu-link flex items-center text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400" href="/console/api/state" title="Browse State Data"><span class="menu-icon mr-2">📋</span><span class="menu-text">Browser</span></a>
+      <a class="menu-link flex items-center text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400" href="/console/api/state/playground" title="Test States API"><span class="menu-icon mr-2">🧪</span><span class="menu-text">Playground</span></a>
+      <a class="menu-link flex items-center text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400" href="/console/api/state/docs" title="States API Documentation"><span class="menu-icon mr-2">📖</span><span class="menu-text">Documentation</span></a>
+      <a class="menu-link flex items-center text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400" href="/console/api/stats?api=state" title="States API Statistics"><span class="menu-icon mr-2">📊</span><span class="menu-text">Stats</span></a>
+    </div>
+  </div>
+
+  <!-- Settings API submenu -->
+  <div class="submenu-group">
+    <button class="menu-link submenu-toggle flex items-center text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400" onclick="toggleSubmenu('settings-api')" title="Settings API">
+      <span class="menu-icon mr-2">🗂️</span>
+      <span class="menu-text">Settings API</span>
+      <span class="menu-text submenu-arrow">▸</span>
+    </button>
+    <div id="settings-api-submenu" class="submenu-items hidden">
+      <a class="menu-link flex items-center text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400" href="/console/api/settings" title="Browse Settings Data"><span class="menu-icon mr-2">📋</span><span class="menu-text">Browser</span></a>
+      <a class="menu-link flex items-center text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400" href="/console/api/settings/playground" title="Test Settings API"><span class="menu-icon mr-2">🧪</span><span class="menu-text">Playground</span></a>
+      <a class="menu-link flex items-center text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400" href="/console/api/settings/docs" title="Settings API Documentation"><span class="menu-icon mr-2">📖</span><span class="menu-text">Documentation</span></a>
+      <a class="menu-link flex items-center text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400" href="/console/api/stats?api=settings" title="Settings API Statistics"><span class="menu-icon mr-2">📊</span><span class="menu-text">Stats</span></a>
+    </div>
+  </div>
+
+  <a class="menu-link flex items-center text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400" href="/console/api/stats" title="API Statistics"><span class="menu-icon mr-2">📊</span><span class="menu-text">API Stats</span></a>
   <a class="menu-link flex items-center text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400" href="/admin/status" title="System Status"><span class="menu-icon mr-2">🔧</span><span class="menu-text">Status</span></a>
   {{ template "menu_common" . }}
 </nav>
@@ -61,13 +93,42 @@
 
 <nav class="space-y-2 text-sm flex-1 pt-4 border-t border-gray-200 dark:border-gray-700">
   <a class="menu-link flex items-center text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400" href="/dashboard" title="Dashboard"><span class="menu-icon mr-2">🎛️</span><span class="menu-text">Dashboard</span></a>
+  {{ if eq .Role "developer" }}
+  <!-- States API submenu -->
+  <div class="submenu-group">
+    <button class="menu-link submenu-toggle flex items-center text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400" onclick="toggleSubmenu('state-api')" title="States API">
+      <span class="menu-icon mr-2">💾</span>
+      <span class="menu-text">States API</span>
+      <span class="menu-text submenu-arrow">▸</span>
+    </button>
+    <div id="state-api-submenu" class="submenu-items hidden">
+      <a class="menu-link flex items-center text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400" href="/console/api/state" title="Browse State Data"><span class="menu-icon mr-2">📋</span><span class="menu-text">Browser</span></a>
+      <a class="menu-link flex items-center text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400" href="/console/api/state/playground" title="Test States API"><span class="menu-icon mr-2">🧪</span><span class="menu-text">Playground</span></a>
+      <a class="menu-link flex items-center text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400" href="/console/api/state/docs" title="States API Documentation"><span class="menu-icon mr-2">📖</span><span class="menu-text">Documentation</span></a>
+      <a class="menu-link flex items-center text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400" href="/console/api/stats?api=state" title="States API Statistics"><span class="menu-icon mr-2">📊</span><span class="menu-text">Stats</span></a>
+    </div>
+  </div>
+
+  <!-- Settings API submenu -->
+  <div class="submenu-group">
+    <button class="menu-link submenu-toggle flex items-center text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400" onclick="toggleSubmenu('settings-api')" title="Settings API">
+      <span class="menu-icon mr-2">🗂️</span>
+      <span class="menu-text">Settings API</span>
+      <span class="menu-text submenu-arrow">▸</span>
+    </button>
+    <div id="settings-api-submenu" class="submenu-items hidden">
+      <a class="menu-link flex items-center text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400" href="/console/api/settings" title="Browse Settings Data"><span class="menu-icon mr-2">📋</span><span class="menu-text">Browser</span></a>
+      <a class="menu-link flex items-center text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400" href="/console/api/settings/playground" title="Test Settings API"><span class="menu-icon mr-2">🧪</span><span class="menu-text">Playground</span></a>
+      <a class="menu-link flex items-center text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400" href="/console/api/settings/docs" title="Settings API Documentation"><span class="menu-icon mr-2">📖</span><span class="menu-text">Documentation</span></a>
+      <a class="menu-link flex items-center text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400" href="/console/api/stats?api=settings" title="Settings API Statistics"><span class="menu-icon mr-2">📊</span><span class="menu-text">Stats</span></a>
+    </div>
+  </div>
+
+  <a class="menu-link flex items-center text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400" href="/console/api/stats" title="API Statistics"><span class="menu-icon mr-2">📊</span><span class="menu-text">API Stats</span></a>
+  <a class="menu-link flex items-center text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400" href="/ledger" title="Request Error Ledger"><span class="menu-icon mr-2">📝</span><span class="menu-text">Error Ledger</span></a>
+  {{ end }}
   <a class="menu-link flex items-center text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400" href="/my-announcements" title="Announcements"><span class="menu-icon mr-2">📢</span><span class="menu-text">Announcements</span></a>
   <a class="menu-link flex items-center text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400" href="/library" title="Library"><span class="menu-icon mr-2">📁</span><span class="menu-text">Library</span></a>
-  {{ if eq .Role "developer" }}
-  <a class="menu-link flex items-center text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400" href="/ledger" title="Request Ledger"><span class="menu-icon mr-2">📝</span><span class="menu-text">Ledger</span></a>
-  <a class="menu-link flex items-center text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400" href="/jobs" title="Job Queue"><span class="menu-icon mr-2">⚡</span><span class="menu-text">Jobs</span></a>
-  <a class="menu-link flex items-center text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400" href="/stats" title="Statistics"><span class="menu-icon mr-2">📈</span><span class="menu-text">Stats</span></a>
-  {{ end }}
   {{ template "menu_common" . }}
 </nav>
 

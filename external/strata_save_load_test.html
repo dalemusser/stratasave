@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>strata_save /load tester</title>
+  <style>
+    :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    body { margin: 24px; max-width: 920px; }
+    h1 { margin: 0 0 12px; font-size: 20px; }
+    .card { border: 1px solid #ddd; border-radius: 10px; padding: 16px; }
+    form { display: grid; grid-template-columns: 1fr 160px; gap: 12px; align-items: end; }
+    label { display: grid; gap: 6px; font-size: 13px; }
+    input {
+      border: 1px solid #ccc; border-radius: 8px; padding: 10px 12px;
+      font-size: 14px; outline: none;
+    }
+    input:focus { border-color: #777; }
+    button {
+      border: 1px solid #222; background: #222; color: #fff;
+      border-radius: 8px; padding: 10px 12px; font-size: 14px;
+      cursor: pointer;
+    }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .meta { margin-top: 10px; font-size: 12px; color: #555; display: grid; gap: 4px; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; }
+    code { background: #f6f6f6; padding: 2px 6px; border-radius: 6px; }
+    .result {
+      margin-top: 14px;
+      border: 1px solid #ddd; border-radius: 10px;
+      padding: 12px; background: #0b0b0b; color: #e9e9e9;
+      max-height: 420px; overflow: auto; white-space: pre; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 13px; line-height: 1.4;
+    }
+    .status { margin-top: 12px; font-size: 13px; }
+    .status.ok { color: #0a7a2f; }
+    .status.bad { color: #b00020; }
+    .hint { margin-top: 10px; font-size: 12px; color: #666; }
+  </style>
+</head>
+<body>
+  <h1>strata_save: POST /load (mhs)</h1>
+
+  <div class="card">
+    <form id="loadForm">
+      <label>
+        user_id
+        <input id="userId" name="user_id" placeholder="e.g. 12345" required />
+      </label>
+
+      <label>
+        limit
+        <input id="limit" name="limit" type="number" min="1" step="1" value="1" />
+      </label>
+
+      <div class="row" style="grid-column: 1 / -1; align-items: center;">
+        <button id="submitBtn" type="submit">Load saves</button>
+        <button id="clearBtn" type="button" style="background:#fff;color:#222;">Clear</button>
+      </div>
+    </form>
+
+    <div class="meta">
+      <div>Endpoint: <code>https://save.adroit.games/load</code></div>
+      <div>Game: <code>mhs</code></div>
+      <div>Auth header: <code>Authorization: Bearer LEARN_FAST</code></div>
+    </div>
+
+    <div id="status" class="status"></div>
+    <div id="result" class="result" aria-live="polite">Result will appear here…</div>
+
+    <div class="hint">
+      Note: If you open this file locally and the browser blocks the request due to CORS,
+      you’ll need to serve it from a small local server (or enable CORS on the API).
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const API_URL = "https://save.adroit.games/load";
+      const API_KEY = "LEARN_FAST";
+      const GAME = "mhs";
+
+      const form = document.getElementById("loadForm");
+      const userIdEl = document.getElementById("userId");
+      const limitEl = document.getElementById("limit");
+      const submitBtn = document.getElementById("submitBtn");
+      const clearBtn = document.getElementById("clearBtn");
+      const statusEl = document.getElementById("status");
+      const resultEl = document.getElementById("result");
+
+      function setStatus(msg, ok) {
+        statusEl.textContent = msg || "";
+        statusEl.className = "status" + (msg ? (ok ? " ok" : " bad") : "");
+      }
+
+      function pretty(obj) {
+        return JSON.stringify(obj, null, 2);
+      }
+
+      function setResult(text) {
+        resultEl.textContent = text;
+        resultEl.scrollTop = 0;
+      }
+
+      clearBtn.addEventListener("click", () => {
+        setStatus("");
+        setResult("Result will appear here…");
+      });
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        setStatus("");
+        setResult("Loading…");
+        submitBtn.disabled = true;
+
+        const user_id = (userIdEl.value || "").trim();
+        let limit = Number(limitEl.value);
+
+        if (!user_id) {
+          setStatus("user_id is required.", false);
+          setResult("No request sent.");
+          submitBtn.disabled = false;
+          return;
+        }
+        if (!Number.isFinite(limit) || limit <= 0) limit = 1;
+
+        const payload = { user_id, game: GAME, limit };
+
+        try {
+          const res = await fetch(API_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer " + API_KEY
+            },
+            body: JSON.stringify(payload)
+          });
+
+          const contentType = (res.headers.get("content-type") || "").toLowerCase();
+          const rawText = await res.text();
+
+          // Try to parse JSON if possible.
+          let parsed = null;
+          if (contentType.includes("application/json")) {
+            try { parsed = JSON.parse(rawText); } catch (_) {}
+          } else {
+            // Sometimes servers forget to set content-type; still try JSON.
+            try { parsed = JSON.parse(rawText); } catch (_) {}
+          }
+
+          if (!res.ok) {
+            const details = parsed ? pretty(parsed) : rawText || "(empty response body)";
+            setStatus(`Request failed: HTTP ${res.status} ${res.statusText}`, false);
+            setResult(details);
+            return;
+          }
+
+          setStatus(`OK: HTTP ${res.status} ${res.statusText}`, true);
+          setResult(parsed ? pretty(parsed) : (rawText || "(empty response body)"));
+
+        } catch (err) {
+          setStatus("Network / CORS error: " + (err && err.message ? err.message : String(err)), false);
+          setResult(String(err));
+        } finally {
+          submitBtn.disabled = false;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

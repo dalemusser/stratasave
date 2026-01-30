@@ -3,6 +3,7 @@ package ledgerfeature
 
 import (
 	ledgerstore "github.com/dalemusser/stratasave/internal/app/store/ledger"
+	"github.com/dalemusser/stratasave/internal/app/system/timezones"
 	"github.com/dalemusser/stratasave/internal/app/system/viewdata"
 )
 
@@ -23,6 +24,7 @@ type LedgerEntryVM struct {
 	RequestBodySize    int64
 	RequestBodyHash    string
 	RequestBodyPreview string
+	RequestBody        string // Full body (only available on errors)
 	RequestContentType string
 	StatusCode         int
 	ResponseSize       int64
@@ -35,6 +37,8 @@ type LedgerEntryVM struct {
 	TotalMs            float64
 	StartedAt          string
 	CompletedAt        string
+	StartedAtISO       string // ISO 8601 format for JavaScript timezone conversion
+	CompletedAtISO     string // ISO 8601 format for JavaScript timezone conversion
 	Duration           string
 	Metadata           map[string]any
 	StatusClass        string // CSS class for status code
@@ -43,20 +47,22 @@ type LedgerEntryVM struct {
 // LedgerListVM is the view model for the ledger list page.
 type LedgerListVM struct {
 	viewdata.BaseVM
-	Entries    []LedgerEntryVM
-	Filter     ledgerstore.ListFilter
-	Page       int
-	TotalPages int
-	TotalCount int64
-	PrevPage   int
-	NextPage   int
-	Error      string
+	TimezoneGroups []timezones.ZoneGroup
+	Entries        []LedgerEntryVM
+	Filter         ledgerstore.ListFilter
+	Page           int
+	TotalPages     int
+	TotalCount     int64
+	PrevPage       int
+	NextPage       int
+	Error          string
 }
 
 // LedgerDetailVM is the view model for the ledger detail page.
 type LedgerDetailVM struct {
 	viewdata.BaseVM
-	Entry LedgerEntryVM
+	TimezoneGroups []timezones.ZoneGroup
+	Entry          LedgerEntryVM
 }
 
 // StatusBreakdownVM represents a status category with its count and percentage.

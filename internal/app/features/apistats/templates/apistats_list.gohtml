@@ -1,0 +1,513 @@
+{{ define "apistats/list" }}
+  {{ template "layout" . }}
+{{ end }}
+
+{{ define "content" }}
+<div class="flex flex-col h-full">
+  <!-- Header -->
+  <div class="mb-4 flex items-center justify-between">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">API Statistics</h1>
+    <div class="flex items-center gap-4">
+      <!-- API Filter Tabs -->
+      <div class="flex border dark:border-gray-600 rounded overflow-hidden">
+        <a href="/console/api/stats?range={{ .TimeRange }}"
+           class="px-4 py-2 text-sm {{ if eq .APIFilter "" }}bg-indigo-600 text-white{{ else }}bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600{{ end }}">All</a>
+        <a href="/console/api/stats?range={{ .TimeRange }}&api=state"
+           class="px-4 py-2 text-sm border-l dark:border-gray-600 {{ if eq .APIFilter "state" }}bg-indigo-600 text-white{{ else }}bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600{{ end }}">State API</a>
+        <a href="/console/api/stats?range={{ .TimeRange }}&api=settings"
+           class="px-4 py-2 text-sm border-l dark:border-gray-600 {{ if eq .APIFilter "settings" }}bg-indigo-600 text-white{{ else }}bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600{{ end }}">Settings API</a>
+      </div>
+      <!-- Time Range Selector -->
+      <select id="time-range" onchange="updateTimeRange(this.value)"
+              class="text-sm border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded px-3 py-2">
+        <option value="1h"{{ if eq .TimeRange "1h" }} selected{{ end }}>Last hour</option>
+        <option value="6h"{{ if eq .TimeRange "6h" }} selected{{ end }}>Last 6 hours</option>
+        <option value="24h"{{ if eq .TimeRange "24h" }} selected{{ end }}>Last 24 hours</option>
+        <option value="7d"{{ if eq .TimeRange "7d" }} selected{{ end }}>Last 7 days</option>
+        <option value="30d"{{ if eq .TimeRange "30d" }} selected{{ end }}>Last 30 days</option>
+      </select>
+      <!-- Timezone Selector -->
+      <select id="tz-select" class="text-sm border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded px-3 py-2">
+        {{ range .TimezoneGroups }}
+        <optgroup label="{{ .Region }}">
+          {{ range .Zones }}
+          <option value="{{ .ID }}">{{ .Label }}</option>
+          {{ end }}
+        </optgroup>
+        {{ end }}
+      </select>
+    </div>
+  </div>
+
+  <!-- Recording Settings -->
+  <div class="bg-white dark:bg-gray-800 rounded shadow p-4 mb-4">
+    <div class="flex items-center justify-between">
+      <div>
+        <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Recording Resolution</h2>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          Currently recording at <span class="font-mono font-semibold">{{ .CurrentBucket }}</span> intervals
+        </p>
+      </div>
+      {{ if .IsAdmin }}
+      <form hx-post="/console/api/stats/bucket" hx-swap="none" class="flex items-center gap-2">
+        <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+        <select name="bucket" class="text-sm border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded px-3 py-2">
+          <option value="1m"{{ if eq .CurrentBucket "1m0s" }} selected{{ end }}>1 minute</option>
+          <option value="5m"{{ if eq .CurrentBucket "5m0s" }} selected{{ end }}>5 minutes</option>
+          <option value="15m"{{ if eq .CurrentBucket "15m0s" }} selected{{ end }}>15 minutes</option>
+          <option value="30m"{{ if eq .CurrentBucket "30m0s" }} selected{{ end }}>30 minutes</option>
+          <option value="1h"{{ if eq .CurrentBucket "1h0m0s" }} selected{{ end }}>1 hour</option>
+          <option value="2h"{{ if eq .CurrentBucket "2h0m0s" }} selected{{ end }}>2 hours</option>
+          <option value="6h"{{ if eq .CurrentBucket "6h0m0s" }} selected{{ end }}>6 hours</option>
+          <option value="12h"{{ if eq .CurrentBucket "12h0m0s" }} selected{{ end }}>12 hours</option>
+          <option value="24h"{{ if eq .CurrentBucket "24h0m0s" }} selected{{ end }}>24 hours</option>
+        </select>
+        <button type="submit" class="px-3 py-2 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700">
+          Update
+        </button>
+      </form>
+      {{ end }}
+    </div>
+    {{ if .DataResolutions }}
+    <div class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+      Data resolutions in range: {{ range $i, $r := .DataResolutions }}{{ if $i }}, {{ end }}<span class="font-mono">{{ $r }}</span>{{ end }}
+    </div>
+    {{ end }}
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+    {{ if .Summaries }}
+      {{ range .Summaries }}
+      <div class="bg-white dark:bg-gray-800 rounded shadow p-4">
+        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{{ .Label }}</h3>
+        <div class="space-y-1">
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-500 dark:text-gray-400">Requests</span>
+            <span class="font-semibold text-gray-900 dark:text-gray-100">{{ .TotalRequests }}</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-500 dark:text-gray-400">Errors</span>
+            <span class="font-semibold {{ if gt .TotalErrors 0 }}text-red-600 dark:text-red-400{{ else }}text-gray-900 dark:text-gray-100{{ end }}">{{ .TotalErrors }}</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-500 dark:text-gray-400">Avg Response</span>
+            <span class="font-semibold text-gray-900 dark:text-gray-100">{{ printf "%.1f" .AvgMs }}ms</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-500 dark:text-gray-400">Min / Max</span>
+            <span class="font-semibold text-gray-900 dark:text-gray-100">{{ .MinMs }}ms / {{ .MaxMs }}ms</span>
+          </div>
+        </div>
+      </div>
+      {{ end }}
+    {{ else }}
+    <div class="col-span-full bg-white dark:bg-gray-800 rounded shadow p-8 text-center">
+      <p class="text-gray-500 dark:text-gray-400">No API statistics recorded yet.</p>
+      <p class="text-sm text-gray-400 dark:text-gray-500 mt-2">Statistics will appear after API requests are made.</p>
+    </div>
+    {{ end }}
+  </div>
+
+  <!-- Charts Section -->
+  {{ if .Summaries }}
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+    <!-- Request Count Chart -->
+    <div class="bg-white dark:bg-gray-800 rounded shadow p-4">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Request Count</h3>
+        <span class="tz-label text-xs text-gray-500 dark:text-gray-400"></span>
+      </div>
+      <div class="h-96">
+        <canvas id="requests-chart"></canvas>
+      </div>
+    </div>
+
+    <!-- Response Time Chart -->
+    <div class="bg-white dark:bg-gray-800 rounded shadow p-4">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Average Response Time (ms)</h3>
+        <span class="tz-label text-xs text-gray-500 dark:text-gray-400"></span>
+      </div>
+      <div class="h-96">
+        <canvas id="response-time-chart"></canvas>
+      </div>
+    </div>
+  </div>
+  {{ end }}
+
+  {{ if .IsAdmin }}
+  <!-- Data Management (Admin Only) -->
+  <div class="bg-white dark:bg-gray-800 rounded shadow p-4">
+    <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Data Management</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <!-- Roll-up -->
+      <div class="border dark:border-gray-700 rounded p-4">
+        <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Roll Up Data</h3>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Aggregate fine-grained data into coarser buckets.</p>
+        <form hx-post="/console/api/stats/rollup" hx-swap="none" class="space-y-2">
+          <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+          <div class="flex gap-2">
+            <select name="source" class="flex-1 text-sm border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded px-2 py-1">
+              <option value="1m">From: 1 minute</option>
+              <option value="5m">From: 5 minutes</option>
+              <option value="15m">From: 15 minutes</option>
+              <option value="1h">From: 1 hour</option>
+            </select>
+            <select name="target" class="flex-1 text-sm border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded px-2 py-1">
+              <option value="1h">To: 1 hour</option>
+              <option value="6h">To: 6 hours</option>
+              <option value="24h">To: 24 hours</option>
+            </select>
+          </div>
+          <div class="flex gap-2">
+            <select name="days" class="flex-1 text-sm border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded px-2 py-1">
+              <option value="168h">Last 7 days</option>
+              <option value="336h">Last 14 days</option>
+              <option value="720h">Last 30 days</option>
+            </select>
+            <button type="submit" class="px-3 py-1 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700">Roll Up</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Delete -->
+      <div class="border dark:border-gray-700 rounded p-4">
+        <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Delete Old Data</h3>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Remove old statistics data.</p>
+        <form hx-post="/console/api/stats/delete" hx-swap="none" hx-confirm="Are you sure you want to delete this data?" class="space-y-2">
+          <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+          <div class="flex gap-2">
+            <select name="bucket" class="flex-1 text-sm border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded px-2 py-1">
+              <option value="">All resolutions</option>
+              <option value="1m0s">1 minute only</option>
+              <option value="5m0s">5 minutes only</option>
+              <option value="15m0s">15 minutes only</option>
+              <option value="1h0m0s">1 hour only</option>
+            </select>
+            <select name="days" class="flex-1 text-sm border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded px-2 py-1">
+              <option value="168h">Older than 7 days</option>
+              <option value="336h">Older than 14 days</option>
+              <option value="720h">Older than 30 days</option>
+              <option value="2160h">Older than 90 days</option>
+            </select>
+          </div>
+          <button type="submit" class="w-full px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700">Delete</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {{ end }}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Current API filter
+const currentApiFilter = '{{ .APIFilter }}';
+
+function updateTimeRange(range) {
+  var url = '/console/api/stats?range=' + range;
+  if (currentApiFilter) {
+    url += '&api=' + currentApiFilter;
+  }
+  window.location.href = url;
+}
+
+// Timezone handling
+var STORAGE_KEY = 'api_stats_timezone';
+var tzSelect = document.getElementById('tz-select');
+var browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+var storedTz = localStorage.getItem(STORAGE_KEY);
+var currentTz = storedTz || browserTz;
+
+// Find timezone option in select
+function findTimezoneOption(tz) {
+  if (!tzSelect) return 'UTC';
+  var options = tzSelect.options;
+  for (var i = 0; i < options.length; i++) {
+    if (options[i].value === tz) {
+      return tz;
+    }
+  }
+  // Try prefix match (e.g., America/New_York matches America/*)
+  var prefix = tz.split('/')[0];
+  for (var i = 0; i < options.length; i++) {
+    if (options[i].value.startsWith(prefix + '/')) {
+      return options[i].value;
+    }
+  }
+  // Default to UTC if no match
+  return 'UTC';
+}
+
+// Update timezone labels on chart boxes
+function updateTimezoneLabels() {
+  var labels = document.querySelectorAll('.tz-label');
+  // Get the timezone abbreviation
+  var now = new Date();
+  var tzAbbr = now.toLocaleString('en-US', { timeZone: currentTz, timeZoneName: 'short' }).split(' ').pop();
+  labels.forEach(function(el) {
+    el.textContent = 'Timezone: ' + tzAbbr;
+  });
+}
+
+// Set initial timezone selection
+if (tzSelect) {
+  var selectedTz = findTimezoneOption(currentTz);
+  tzSelect.value = selectedTz;
+  currentTz = selectedTz;
+  updateTimezoneLabels();
+
+  tzSelect.addEventListener('change', function() {
+    currentTz = tzSelect.value;
+    localStorage.setItem(STORAGE_KEY, currentTz);
+    updateTimezoneLabels();
+    rebuildCharts();
+  });
+}
+
+// Chart data from server
+const stateSaveData = {{ toJSON .StateSaveData }};
+const stateLoadData = {{ toJSON .StateLoadData }};
+const settingsSaveData = {{ toJSON .SettingsSaveData }};
+const settingsLoadData = {{ toJSON .SettingsLoadData }};
+const timeRange = '{{ .TimeRange }}';
+
+// Helper to format timestamps using selected timezone
+function formatTimestamp(ts) {
+  const date = new Date(ts);
+  return date.toLocaleString('en-US', {
+    timeZone: currentTz,
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
+}
+
+// Get bucket interval in milliseconds based on time range
+function getBucketInterval() {
+  switch (timeRange) {
+    case '1h': return 5 * 60 * 1000;      // 5 minutes
+    case '6h': return 15 * 60 * 1000;     // 15 minutes
+    case '24h': return 60 * 60 * 1000;    // 1 hour
+    case '7d': return 6 * 60 * 60 * 1000; // 6 hours
+    case '30d': return 24 * 60 * 60 * 1000; // 1 day
+    default: return 60 * 60 * 1000;       // default 1 hour
+  }
+}
+
+// Get time range duration in milliseconds
+function getTimeRangeDuration() {
+  switch (timeRange) {
+    case '1h': return 60 * 60 * 1000;
+    case '6h': return 6 * 60 * 60 * 1000;
+    case '24h': return 24 * 60 * 60 * 1000;
+    case '7d': return 7 * 24 * 60 * 60 * 1000;
+    case '30d': return 30 * 24 * 60 * 60 * 1000;
+    default: return 24 * 60 * 60 * 1000;
+  }
+}
+
+// Generate all time buckets for the full range
+function generateTimeBuckets() {
+  const now = new Date();
+  const interval = getBucketInterval();
+  const duration = getTimeRangeDuration();
+  const startTime = new Date(now.getTime() - duration);
+
+  // Align start time to bucket boundary
+  const alignedStart = new Date(Math.floor(startTime.getTime() / interval) * interval);
+
+  const buckets = [];
+  let current = alignedStart;
+  while (current <= now) {
+    buckets.push(current.toISOString());
+    current = new Date(current.getTime() + interval);
+  }
+  return buckets;
+}
+
+// Get data values for a specific dataset, mapping to generated buckets
+function getDataValues(data, buckets, field) {
+  if (!data) return buckets.map(() => 0);
+
+  // Create a map of timestamp -> value, normalizing timestamps to bucket boundaries
+  const interval = getBucketInterval();
+  const dataMap = new Map();
+  data.forEach(d => {
+    const ts = new Date(d.Timestamp);
+    const aligned = new Date(Math.floor(ts.getTime() / interval) * interval).toISOString();
+    dataMap.set(aligned, d[field]);
+  });
+
+  return buckets.map(ts => dataMap.get(ts) || 0);
+}
+
+// Generate buckets for the full time range
+const sortedTimestamps = generateTimeBuckets();
+const labels = sortedTimestamps.map(ts => formatTimestamp(ts));
+
+// Build datasets based on available data
+function buildRequestsDatasets() {
+  const datasets = [];
+  if (stateSaveData && stateSaveData.length > 0) {
+    datasets.push({
+      label: 'Save State',
+      data: getDataValues(stateSaveData, sortedTimestamps, 'Requests'),
+      borderColor: 'rgb(99, 102, 241)',
+      backgroundColor: 'rgba(99, 102, 241, 0.1)',
+      tension: 0.1
+    });
+  }
+  if (stateLoadData && stateLoadData.length > 0) {
+    datasets.push({
+      label: 'Load State',
+      data: getDataValues(stateLoadData, sortedTimestamps, 'Requests'),
+      borderColor: 'rgb(34, 197, 94)',
+      backgroundColor: 'rgba(34, 197, 94, 0.1)',
+      tension: 0.1
+    });
+  }
+  if (settingsSaveData && settingsSaveData.length > 0) {
+    datasets.push({
+      label: 'Save Settings',
+      data: getDataValues(settingsSaveData, sortedTimestamps, 'Requests'),
+      borderColor: 'rgb(249, 115, 22)',
+      backgroundColor: 'rgba(249, 115, 22, 0.1)',
+      tension: 0.1
+    });
+  }
+  if (settingsLoadData && settingsLoadData.length > 0) {
+    datasets.push({
+      label: 'Load Settings',
+      data: getDataValues(settingsLoadData, sortedTimestamps, 'Requests'),
+      borderColor: 'rgb(236, 72, 153)',
+      backgroundColor: 'rgba(236, 72, 153, 0.1)',
+      tension: 0.1
+    });
+  }
+  return datasets;
+}
+
+function buildResponseTimeDatasets() {
+  const datasets = [];
+  if (stateSaveData && stateSaveData.length > 0) {
+    datasets.push({
+      label: 'Save State',
+      data: getDataValues(stateSaveData, sortedTimestamps, 'AvgMs'),
+      borderColor: 'rgb(99, 102, 241)',
+      backgroundColor: 'rgba(99, 102, 241, 0.1)',
+      tension: 0.1
+    });
+  }
+  if (stateLoadData && stateLoadData.length > 0) {
+    datasets.push({
+      label: 'Load State',
+      data: getDataValues(stateLoadData, sortedTimestamps, 'AvgMs'),
+      borderColor: 'rgb(34, 197, 94)',
+      backgroundColor: 'rgba(34, 197, 94, 0.1)',
+      tension: 0.1
+    });
+  }
+  if (settingsSaveData && settingsSaveData.length > 0) {
+    datasets.push({
+      label: 'Save Settings',
+      data: getDataValues(settingsSaveData, sortedTimestamps, 'AvgMs'),
+      borderColor: 'rgb(249, 115, 22)',
+      backgroundColor: 'rgba(249, 115, 22, 0.1)',
+      tension: 0.1
+    });
+  }
+  if (settingsLoadData && settingsLoadData.length > 0) {
+    datasets.push({
+      label: 'Load Settings',
+      data: getDataValues(settingsLoadData, sortedTimestamps, 'AvgMs'),
+      borderColor: 'rgb(236, 72, 153)',
+      backgroundColor: 'rgba(236, 72, 153, 0.1)',
+      tension: 0.1
+    });
+  }
+  return datasets;
+}
+
+// Chart references for rebuilding on timezone change
+var requestsChart = null;
+var responseTimeChart = null;
+
+// Function to rebuild charts with new timezone labels
+function rebuildCharts() {
+  const newLabels = sortedTimestamps.map(ts => formatTimestamp(ts));
+
+  if (requestsChart) {
+    requestsChart.data.labels = newLabels;
+    requestsChart.update();
+  }
+  if (responseTimeChart) {
+    responseTimeChart.data.labels = newLabels;
+    responseTimeChart.update();
+  }
+}
+
+// Request Count Chart
+if (document.getElementById('requests-chart')) {
+  const requestsCtx = document.getElementById('requests-chart').getContext('2d');
+  requestsChart = new Chart(requestsCtx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: buildRequestsDatasets()
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            usePointStyle: true,
+            padding: 15
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true
+        }
+      }
+    }
+  });
+}
+
+// Response Time Chart
+if (document.getElementById('response-time-chart')) {
+  const responseCtx = document.getElementById('response-time-chart').getContext('2d');
+  responseTimeChart = new Chart(responseCtx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: buildResponseTimeDatasets()
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            usePointStyle: true,
+            padding: 15
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true
+        }
+      }
+    }
+  });
+}
+</script>
+{{ end }}

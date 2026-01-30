@@ -1,0 +1,570 @@
+{{ define "savebrowser/list" }}
+  {{ template "layout" . }}
+{{ end }}
+
+{{ define "content" }}
+<div class="flex flex-col h-full">
+  <!-- Header -->
+  <div class="mb-4 flex items-center">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">💾 States Browser</h1>
+    <button type="button" onclick="showInfoModal()" class="ml-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" title="About this feature">
+      <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+      </svg>
+    </button>
+    <!-- Timezone selector - centered -->
+    <div class="flex-1 flex justify-center">
+      <select id="tz-select" style="width: 380px;" class="text-sm border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+        {{ range .TimezoneGroups }}
+        <optgroup label="{{ .Region }}">
+          {{ range .Zones }}
+          <option value="{{ .ID }}">{{ .Label }}</option>
+          {{ end }}
+        </optgroup>
+        {{ end }}
+      </select>
+    </div>
+    <div class="flex items-center gap-4">
+      {{ if .SelectedGame }}
+      <button type="button"
+              hx-get="/console/api/state/game-picker?selected={{ .SelectedGame }}"
+              hx-target="#modal-root"
+              hx-swap="innerHTML"
+              class="px-3 py-2 border dark:border-gray-600 rounded text-sm text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 flex items-center gap-2">
+        <span>{{ .SelectedGame }}</span>
+        <span class="text-gray-400">▾</span>
+      </button>
+      {{ end }}
+      <button type="button"
+              onclick="showCreateModal()"
+              class="px-3 py-2 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700">
+        + Create State
+      </button>
+    </div>
+  </div>
+
+  {{ if .SelectedGame }}
+  <!-- Players Section -->
+  <section class="bg-white dark:bg-gray-800 rounded shadow mb-4 flex flex-col" style="max-height: 45vh;">
+    <div class="p-3 border-b dark:border-gray-700 flex items-center justify-between gap-4">
+      <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">Players</h2>
+      <form
+        hx-get="/console/api/state/players?game={{ .SelectedGame }}"
+        hx-target="#players-section"
+        hx-swap="innerHTML"
+        hx-trigger="submit, keyup changed delay:300ms from:#player-search"
+        class="flex gap-2 flex-1 justify-end"
+      >
+        <input
+          id="player-search"
+          name="search"
+          type="text"
+          value="{{ .PlayerSearch }}"
+          placeholder="Search players..."
+          class="px-3 py-1 text-sm border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded focus:outline-none focus:ring-2 focus:ring-indigo-400 flex-1 max-w-md"
+        />
+        <a
+          href="/console/api/state?game={{ .SelectedGame }}"
+          hx-get="/console/api/state/players?game={{ .SelectedGame }}"
+          hx-target="#players-section"
+          hx-swap="innerHTML"
+          onclick="document.getElementById('player-search').value = '';"
+          class="px-3 py-1 border dark:border-gray-600 rounded text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+        >Clear</a>
+      </form>
+    </div>
+
+    <div id="players-section" class="flex-1 overflow-auto">
+      {{ template "savebrowser/players_content" . }}
+    </div>
+  </section>
+
+  <!-- Saves Section (only if player selected) -->
+  <section id="saves-section" class="bg-white dark:bg-gray-800 rounded shadow flex-1 flex flex-col min-h-0">
+    {{ template "savebrowser/saves_content" . }}
+  </section>
+  {{ else }}
+  <div class="bg-white dark:bg-gray-800 rounded shadow p-8 text-center">
+    <p class="text-gray-500 dark:text-gray-400">No games found in the database.</p>
+  </div>
+  {{ end }}
+</div>
+
+<!-- Modal Root -->
+<div id="modal-root"></div>
+
+<!-- Delete Confirmation Modal -->
+<div id="delete-modal" class="hidden fixed inset-0 z-50">
+  <div class="fixed inset-0 bg-black/50" onclick="closeDeleteModal()"></div>
+  <div class="fixed inset-0 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4" id="delete-modal-title">Confirm Delete</h3>
+      <p class="text-gray-600 dark:text-gray-400 mb-6" id="delete-modal-message">Are you sure you want to delete this save?</p>
+      <div class="flex justify-end gap-3">
+        <button type="button" onclick="closeDeleteModal()" class="px-4 py-2 text-sm border dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
+        <button type="button" id="delete-confirm-btn" class="px-4 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Create State Modal -->
+<div id="create-modal" class="hidden fixed inset-0 z-50">
+  <div class="fixed inset-0 bg-black/50" onclick="closeCreateModal()"></div>
+  <div class="fixed inset-0 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl border-2 border-gray-500 max-w-lg w-full p-6">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Create State</h3>
+      <form id="create-form" hx-post="/console/api/state/create" hx-swap="none">
+        <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Game</label>
+            <input type="text" name="game" id="create-game" required
+                   placeholder="Enter game name..."
+                   class="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">User ID</label>
+            <input type="text" name="user_id" id="create-user-id" required
+                   placeholder="Enter user ID..."
+                   class="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">State Data (JSON)</label>
+            <textarea name="data" id="create-data" rows="6"
+                      placeholder='{"level": 1, "score": 0}'
+                      class="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-400"></textarea>
+          </div>
+        </div>
+        <div class="flex justify-end gap-3 mt-6">
+          <button type="button" onclick="closeCreateModal()" class="px-4 py-2 text-sm border dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
+          <button type="submit" class="px-4 py-2 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700">Create</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Info Modal -->
+<div id="info-modal" class="hidden fixed inset-0 z-50">
+  <div class="fixed inset-0 bg-black/50" onclick="closeInfoModal()"></div>
+  <div class="fixed inset-0 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full p-6">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">About States Browser</h3>
+      <div class="text-sm text-gray-600 dark:text-gray-400 space-y-3">
+        <p>The <strong>States Browser</strong> is a database management tool that works directly with MongoDB.</p>
+        <ul class="list-disc list-inside space-y-1 ml-2">
+          <li><strong>View</strong> saved game states directly from the database</li>
+          <li><strong>Create</strong> test entries directly into the database</li>
+          <li><strong>Delete</strong> entries directly from the database</li>
+        </ul>
+        <p class="pt-2 border-t dark:border-gray-700">This tool bypasses the API entirely and is intended for data inspection and management during development.</p>
+        <p>To test the API as an external client would (with authentication and stats tracking), use the <strong>Playground</strong> instead.</p>
+      </div>
+      <div class="flex justify-end mt-6">
+        <button type="button" onclick="closeInfoModal()" class="px-4 py-2 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700">Got it</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let pendingDeleteUrl = null;
+
+function showInfoModal() {
+  document.getElementById('info-modal').classList.remove('hidden');
+}
+
+function closeInfoModal() {
+  document.getElementById('info-modal').classList.add('hidden');
+}
+
+function showDeleteModal(title, message, url) {
+  document.getElementById('delete-modal-title').textContent = title;
+  document.getElementById('delete-modal-message').textContent = message;
+  pendingDeleteUrl = url;
+  document.getElementById('delete-modal').classList.remove('hidden');
+}
+
+function closeDeleteModal() {
+  document.getElementById('delete-modal').classList.add('hidden');
+  pendingDeleteUrl = null;
+}
+
+document.getElementById('delete-confirm-btn').addEventListener('click', function() {
+  if (!pendingDeleteUrl) return;
+
+  var csrfToken = document.querySelector('meta[name="csrf-token"]');
+  var isDeleteAll = pendingDeleteUrl.includes('/user/');
+  var url = pendingDeleteUrl;
+
+  closeDeleteModal();
+
+  var headers = {
+    'Content-Type': 'application/x-www-form-urlencoded'
+  };
+  if (csrfToken) {
+    headers['X-CSRF-Token'] = csrfToken.content;
+  }
+
+  fetch(url, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: headers
+  }).then(function(response) {
+    if (!response.ok) {
+      throw new Error('Delete failed: ' + response.status);
+    }
+    // Dispatch the appropriate event to trigger existing refresh listeners
+    if (isDeleteAll) {
+      document.body.dispatchEvent(new CustomEvent('saves-deleted'));
+    } else {
+      document.body.dispatchEvent(new CustomEvent('save-deleted'));
+    }
+  }).catch(function(err) {
+    alert('Failed to delete: ' + err.message);
+  });
+});
+
+// Helper to get URL parameters (reads current state from URL, not stale template vars)
+function getUrlParam(name) {
+  var params = new URLSearchParams(window.location.search);
+  return params.get(name) || '';
+}
+
+// Listen for delete completion to refresh the saves list
+document.body.addEventListener('save-deleted', function() {
+  var game = getUrlParam('game');
+  var user = getUrlParam('user');
+  var limit = getUrlParam('limit') || '{{ .SaveLimit }}';
+  if (game && user) {
+    htmx.ajax('GET', '/console/api/state/data?game=' + encodeURIComponent(game) + '&user=' + encodeURIComponent(user) + '&limit=' + limit, {
+      target: '#saves-section',
+      swap: 'innerHTML'
+    });
+  }
+});
+
+document.body.addEventListener('saves-deleted', function() {
+  var game = getUrlParam('game');
+  if (game) {
+    // Get current search value from the input field
+    var searchInput = document.getElementById('player-search');
+    var search = searchInput ? searchInput.value : '';
+    var url = '/console/api/state/players?game=' + encodeURIComponent(game);
+    if (search) {
+      url += '&search=' + encodeURIComponent(search);
+    }
+    // Refresh players list and clear saves section
+    htmx.ajax('GET', url, {
+      target: '#players-section',
+      swap: 'innerHTML'
+    });
+    // Show the "select a player" message
+    document.getElementById('saves-section').innerHTML = '<div class="p-4 border-b dark:border-gray-700"><h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300">States</h2></div><p class="p-4 text-sm text-gray-500 dark:text-gray-400">Select a player to view states.</p>';
+  }
+});
+
+// Game picker functions
+function closeGamePicker() {
+  document.getElementById('modal-root').innerHTML = '';
+}
+
+function confirmGameSelection() {
+  const selected = document.querySelector('input[name="game-selection"]:checked');
+  if (selected) {
+    window.location.href = '/console/api/state?game=' + encodeURIComponent(selected.value);
+  }
+  closeGamePicker();
+}
+
+// Create modal functions
+function showCreateModal() {
+  document.getElementById('create-game').value = '';
+  document.getElementById('create-user-id').value = '';
+  document.getElementById('create-data').value = '';
+  document.getElementById('create-modal').classList.remove('hidden');
+  document.getElementById('create-game').focus();
+}
+
+function closeCreateModal() {
+  document.getElementById('create-modal').classList.add('hidden');
+}
+
+// Download state data as JSON file
+function downloadStateData(stateId, game, userId) {
+  var dataEl = document.getElementById('state-data-' + stateId);
+  if (!dataEl) return;
+
+  var content = dataEl.textContent;
+  var blob = new Blob([content], { type: 'application/json' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'state-' + game + '-' + userId + '-' + stateId + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// Listen for create completion
+document.body.addEventListener('state-created', function(event) {
+  closeCreateModal();
+  // Get the game from the form and redirect to it
+  const createdGame = document.getElementById('create-game').value;
+  if (createdGame) {
+    window.location.href = '/console/api/state?game=' + encodeURIComponent(createdGame);
+  } else {
+    window.location.reload();
+  }
+});
+
+// Timezone handling
+(function() {
+  var tzSelect = document.getElementById('tz-select');
+  if (!tzSelect) return;
+
+  var STORAGE_KEY = 'states_browser_timezone';
+
+  // Detect browser timezone
+  var browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  // Get stored timezone or use browser timezone
+  var storedTz = localStorage.getItem(STORAGE_KEY);
+  var currentTz = storedTz || browserTz;
+
+  // Find the closest match in our select options
+  function findTimezoneOption(tz) {
+    var options = tzSelect.options;
+    for (var i = 0; i < options.length; i++) {
+      if (options[i].value === tz) {
+        return tz;
+      }
+    }
+    // If not found, try to find a match by region prefix
+    var parts = tz.split('/');
+    if (parts.length >= 2) {
+      var prefix = parts[0] + '/' + parts[1];
+      for (var i = 0; i < options.length; i++) {
+        if (options[i].value.startsWith(prefix)) {
+          return options[i].value;
+        }
+      }
+    }
+    // Default to UTC if no match
+    return 'UTC';
+  }
+
+  // Set initial selection
+  var selectedTz = findTimezoneOption(currentTz);
+  tzSelect.value = selectedTz;
+
+  // Format all timestamps in selected timezone
+  function formatTimestamps(tz) {
+    document.querySelectorAll('.tz-time').forEach(function(el) {
+      var iso = el.getAttribute('data-datetime');
+      if (!iso) return;
+
+      var date = new Date(iso);
+      if (isNaN(date.getTime())) return;
+
+      try {
+        var options = {
+          timeZone: tz,
+          year: 'numeric',
+          month: 'short',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false,
+          timeZoneName: 'short'
+        };
+        var formatted = date.toLocaleString('en-US', options);
+        // Reformat from "Jan 11, 2026, 15:03:46 PST" to "Jan 11, 2026 15:03:46 PST"
+        formatted = formatted.replace(/, (\d{2}:)/, ' $1');
+        el.textContent = formatted;
+        // Show the separators (opening and closing parens)
+        var parent = el.parentElement;
+        if (parent) {
+          parent.querySelectorAll('.tz-separator').forEach(function(sep) {
+            sep.classList.remove('hidden');
+          });
+        }
+      } catch (e) {
+        console.warn('Invalid timezone:', tz, e);
+      }
+    });
+  }
+
+  // Initial format
+  formatTimestamps(selectedTz);
+
+  // Handle timezone change
+  tzSelect.addEventListener('change', function() {
+    var tz = tzSelect.value;
+    localStorage.setItem(STORAGE_KEY, tz);
+    formatTimestamps(tz);
+  });
+
+  // Re-format after HTMX content swap
+  document.body.addEventListener('htmx:afterSwap', function(evt) {
+    if (evt.detail.target && (evt.detail.target.id === 'saves-section' || evt.detail.target.id === 'content')) {
+      formatTimestamps(tzSelect.value);
+    }
+  });
+})();
+</script>
+{{ end }}
+
+{{ define "savebrowser/players_content" }}
+<!-- Pagination info -->
+<div class="flex items-center justify-between mb-1 px-4 pt-3">
+  <span class="text-sm text-gray-600 dark:text-gray-400">
+    {{ if .PlayerTotal }}{{ .PlayerRangeStart }}-{{ .PlayerRangeEnd }} of {{ .PlayerTotal }}{{ else }}0 of 0{{ end }}
+  </span>
+  <div class="flex gap-2">
+    {{ if .PlayerHasPrev }}
+    <a hx-get="/console/api/state/players?game={{ .SelectedGame }}&search={{ .PlayerSearch }}&page={{ .PlayerPrevPage }}"
+       hx-target="#players-section"
+       hx-swap="innerHTML"
+       class="px-2 py-1 border dark:border-gray-600 rounded text-xs text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">Prev</a>
+    {{ else }}
+    <span class="px-2 py-1 border dark:border-gray-600 rounded text-xs text-gray-400 dark:text-gray-500">Prev</span>
+    {{ end }}
+    {{ if .PlayerHasNext }}
+    <a hx-get="/console/api/state/players?game={{ .SelectedGame }}&search={{ .PlayerSearch }}&page={{ .PlayerNextPage }}"
+       hx-target="#players-section"
+       hx-swap="innerHTML"
+       class="px-2 py-1 border dark:border-gray-600 rounded text-xs text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">Next</a>
+    {{ else }}
+    <span class="px-2 py-1 border dark:border-gray-600 rounded text-xs text-gray-400 dark:text-gray-500">Next</span>
+    {{ end }}
+  </div>
+</div>
+
+<!-- Table -->
+<div class="overflow-auto px-4 pb-3" style="max-height: calc(45vh - 140px);">
+  {{ if .Players }}
+  <table class="min-w-full text-sm">
+    <thead class="bg-gray-100 dark:bg-gray-700 sticky top-0">
+      <tr class="border-b border-gray-300 dark:border-gray-600">
+        <th class="px-4 py-3 text-left text-gray-600 dark:text-gray-400 uppercase text-xs">Player ID</th>
+        <th class="px-4 py-3 text-center text-gray-600 dark:text-gray-400 uppercase text-xs">Saves</th>
+        <th class="px-4 py-3 text-right text-gray-600 dark:text-gray-400 uppercase text-xs">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{ range .Players }}
+      <tr hx-get="/console/api/state/data?game={{ $.SelectedGame }}&user={{ .UserID }}&limit={{ $.SaveLimit }}"
+          hx-target="#saves-section"
+          hx-swap="innerHTML"
+          hx-push-url="/console/api/state?game={{ $.SelectedGame }}&user={{ .UserID }}"
+          class="border-b border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900/50 cursor-pointer {{ if eq .UserID $.SelectedUser }}bg-indigo-50 dark:bg-indigo-900/20{{ end }}">
+        <td class="px-4 py-3 text-gray-900 dark:text-gray-100">
+          <div class="truncate max-w-md" title="{{ .UserID }}">{{ .UserID }}</div>
+        </td>
+        <td class="px-4 py-3 text-center text-gray-600 dark:text-gray-400">{{ .SaveCount }}</td>
+        <td class="px-4 py-3 text-right">
+          <span class="px-2 py-1 bg-indigo-600 text-white rounded text-xs">View</span>
+        </td>
+      </tr>
+      {{ end }}
+    </tbody>
+  </table>
+  {{ else }}
+  <p class="text-sm text-gray-500 dark:text-gray-400 py-4">No players found{{ if .PlayerSearch }} matching "{{ .PlayerSearch }}"{{ end }}.</p>
+  {{ end }}
+</div>
+{{ end }}
+
+{{ define "savebrowser/saves_content" }}
+<div class="p-3 border-b dark:border-gray-700 flex flex-wrap items-center justify-between gap-2">
+  <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300">
+    States
+    {{ if .SelectedUser }}<span class="font-normal text-gray-500 dark:text-gray-400">for {{ .SelectedUser }}</span>{{ end }}
+  </h2>
+  {{ if and .SelectedGame .SelectedUser .Saves }}
+  <div class="flex items-center gap-3">
+    <!-- Delete All button -->
+    {{ if gt .SaveTotal 0 }}
+    <button type="button"
+            onclick="showDeleteModal('Delete All States', 'Are you sure you want to delete all {{ .SaveTotal }} states for this user? This cannot be undone.', '/console/api/state/{{ .SelectedGame }}/user/{{ .SelectedUser }}/delete')"
+            class="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700">
+      Delete All ({{ .SaveTotal }})
+    </button>
+    {{ end }}
+    <!-- Count and pagination -->
+    <span class="text-sm text-gray-600 dark:text-gray-400">{{ len .Saves }} of {{ .SaveTotal }} shown</span>
+    <div class="flex gap-1">
+      {{ if .HasPrev }}
+      <button hx-get="/console/api/state/data?game={{ .SelectedGame }}&user={{ .SelectedUser }}&before={{ .PrevCursor }}"
+              hx-target="#saves-section"
+              hx-swap="innerHTML"
+              class="px-2 py-1 text-xs border dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+        Prev
+      </button>
+      {{ else }}
+      <span class="px-2 py-1 text-xs border dark:border-gray-600 rounded text-gray-400 dark:text-gray-500">Prev</span>
+      {{ end }}
+      {{ if .HasNext }}
+      <button hx-get="/console/api/state/data?game={{ .SelectedGame }}&user={{ .SelectedUser }}&after={{ .NextCursor }}"
+              hx-target="#saves-section"
+              hx-swap="innerHTML"
+              class="px-2 py-1 text-xs border dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+        Next
+      </button>
+      {{ else }}
+      <span class="px-2 py-1 text-xs border dark:border-gray-600 rounded text-gray-400 dark:text-gray-500">Next</span>
+      {{ end }}
+    </div>
+  </div>
+  {{ end }}
+</div>
+
+<div class="flex-1 overflow-auto">
+{{ if and .SelectedGame .SelectedUser }}
+  {{ if .Saves }}
+  <div class="divide-y dark:divide-gray-700">
+    {{ range $index, $save := .Saves }}
+    <div class="p-3">
+      <div class="flex items-center justify-between mb-2">
+        <div class="text-sm text-gray-600 dark:text-gray-400">
+          ID: <span class="font-mono italic">{{ $save.ID }}</span> - <span class="tz-time" data-datetime="{{ $save.Timestamp.Format "2006-01-02T15:04:05Z" }}"></span><span class="tz-separator hidden"> (</span><span class="tz-utc">{{ $save.Timestamp.Format "Jan 02, 2006 15:04:05" }} UTC</span><span class="tz-separator hidden">)</span>
+        </div>
+        <button type="button"
+                onclick="showDeleteModal('Delete State', 'Are you sure you want to delete this state?', '/console/api/state/{{ $.SelectedGame }}/{{ $save.ID }}/delete')"
+                class="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700">
+          Delete
+        </button>
+      </div>
+      <details class="group">
+        <summary class="flex items-center gap-2 cursor-pointer list-none">
+          <span class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">
+            <span class="group-open:hidden">Show state data</span>
+            <span class="hidden group-open:inline">Hide state data</span>
+          </span>
+          <button type="button" onclick="event.stopPropagation(); downloadStateData('{{ $save.ID }}', '{{ $.SelectedGame }}', '{{ $save.UserID }}')" class="hover:opacity-80 transition-opacity" title="Download state data">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none">
+              <path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2Z" fill="#60A5FA"/>
+              <path d="M14 2V8H20L14 2Z" fill="#3B82F6"/>
+              <path d="M12 11V17M12 17L9 14M12 17L15 14" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </summary>
+        <pre id="state-data-{{ $save.ID }}" class="mt-2 p-3 text-xs bg-gray-50 dark:bg-gray-900 rounded overflow-auto max-h-64 text-gray-800 dark:text-gray-200">{{ $save.SaveData }}</pre>
+      </details>
+    </div>
+    {{ end }}
+  </div>
+  {{ else }}
+  <p class="p-4 text-sm text-gray-500 dark:text-gray-400">No states found for this user.</p>
+  {{ end }}
+{{ else if .SelectedGame }}
+<p class="p-4 text-sm text-gray-500 dark:text-gray-400">Select a player to view states.</p>
+{{ else }}
+<p class="p-4 text-sm text-gray-500 dark:text-gray-400">Select a game and player to view states.</p>
+{{ end }}
+</div>
+{{ end }}

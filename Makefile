@@ -1,14 +1,23 @@
 # StrataSave Makefile
 
-.PHONY: build run test clean dev seed-admin tidy css css-watch css-prod setup setup-tailwind
+.PHONY: build build-linux run test clean dev seed-admin tidy css css-watch css-prod setup setup-tailwind
+
+# Build variables
+BINARY_NAME=stratasave
+BUILD_DIR=bin
+CMD_PATH=./cmd/stratasave
 
 # Build the application
 build:
-	go build -o bin/stratasave ./cmd/stratasave
+	go build -o $(BUILD_DIR)/$(BINARY_NAME) $(CMD_PATH)
+
+# Build for Linux 386 (production server)
+build-linux:
+	GOOS=linux GOARCH=386 go build -o $(BUILD_DIR)/$(BINARY_NAME)-linux-386 $(CMD_PATH)
 
 # Run the application
 run: build
-	./bin/stratasave
+	./$(BUILD_DIR)/$(BINARY_NAME)
 
 # Run in development mode (with live reload if air is installed)
 dev:
@@ -124,10 +133,13 @@ setup: setup-tailwind
 help:
 	@echo "StrataSave Makefile targets:"
 	@echo ""
-	@echo "Development:"
+	@echo "Build & Run:"
 	@echo "  build       - Build the application"
+	@echo "  build-linux - Build for Linux 386 (production server)"
 	@echo "  run         - Build and run the application"
 	@echo "  dev         - Run in development mode"
+	@echo ""
+	@echo "Testing:"
 	@echo "  test        - Run tests"
 	@echo "  test-cover  - Run tests with coverage"
 	@echo "  fmt         - Format code"

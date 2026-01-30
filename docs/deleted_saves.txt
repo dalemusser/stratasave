@@ -1,0 +1,84 @@
+=== DRY RUN: Analyzing saves to delete ===
+
+  neil@example.com: 3787 saves, will delete 3782
+  editor@example.com: 2172 saves, will delete 2167
+  brn373@missouri.edu: 1618 saves, will delete 1613
+  nathan.roy@example.com: 1539 saves, will delete 1534
+  stanley.ford@adroit.edu: 1395 saves, will delete 1390
+  test.user@adroit.edu: 999 saves, will delete 994
+  C@MHS: 737 saves, will delete 732
+  E@MHS: 518 saves, will delete 513
+  test@example.com: 419 saves, will delete 414
+  wenyi5@mhs: 398 saves, will delete 393
+  wenyi7@mhs: 266 saves, will delete 261
+  f@mhs: 215 saves, will delete 210
+  B@MHS: 209 saves, will delete 204
+  122025player@mhs.mhs: 203 saves, will delete 198
+  Griff.Pete@adroit.edu: 148 saves, will delete 143
+  stanley.ford@example.com: 123 saves, will delete 118
+  sysadmin@adroit.games: 119 saves, will delete 114
+  jim1-16-26: 111 saves, will delete 106
+  dddd@mhs: 105 saves, will delete 100
+  wenyi6@mhs: 89 saves, will delete 84
+  666666@mhs: 77 saves, will delete 72
+  studenttestB@MHS: 76 saves, will delete 71
+  iplayer@mhs.mhs: 73 saves, will delete 68
+  gplayer@mhs.mhs: 66 saves, will delete 61
+  ar7hc@missouri.edu: 65 saves, will delete 60
+  jim1-7-26@mhs.mhs: 59 saves, will delete 54
+  wenyi3@mhs: 58 saves, will delete 53
+  wenyi9@mhs: 58 saves, will delete 53
+  wenyi1@mhs: 58 saves, will delete 53
+  student3: 57 saves, will delete 52
+  4444@mhs: 47 saves, will delete 42
+  Grif.Pete@adroit.edu: 41 saves, will delete 36
+  D@MHS: 39 saves, will delete 34
+  A@MHS: 38 saves, will delete 33
+  wenyi2@mhs: 37 saves, will delete 32
+  7777777@mhs: 37 saves, will delete 32
+  wenyi11@mhs.mhs: 30 saves, will delete 25
+  stanford@adroit.edu: 28 saves, will delete 23
+  jim1-9-26@mhs.mhs: 28 saves, will delete 23
+  121225@mhs.mhs: 28 saves, will delete 23
+  wenyi10@mhs.mhs: 26 saves, will delete 21
+  600017187@mhs: 23 saves, will delete 18
+  aa-osterholt@fulton58.org: 15 saves, will delete 10
+  abigail.brooks@example.com: 15 saves, will delete 10
+  600021303@mhs: 12 saves, will delete 7
+  wenyi4@mhs: 12 saves, will delete 7
+  600021846@mhs: 12 saves, will delete 7
+  ad-hans@fulton58.org: 12 saves, will delete 7
+  eric@mhs: 12 saves, will delete 7
+  da-marquez@fulton58.org: 12 saves, will delete 7
+  123125@mhs.mhs: 11 saves, will delete 6
+  600017263@MHS: 11 saves, will delete 6
+  600024912@mhs: 11 saves, will delete 6
+  de-troy@fulton58.org: 11 saves, will delete 6
+  mc-azdell@fulton58.org: 11 saves, will delete 6
+  600023224@mhs: 9 saves, will delete 4
+  el-brown@fulton58.org: 9 saves, will delete 4
+  ja-anderson@fulton58.org: 9 saves, will delete 4
+  ma-furlong@fulton58.org: 9 saves, will delete 4
+  600017800@mhs: 9 saves, will delete 4
+  120125player@mhs.mhs: 8 saves, will delete 3
+  sean1@mhs: 8 saves, will delete 3
+  ki-o'bannon@fulton58.org: 8 saves, will delete 3
+  ky-shannon@fulton58.org: 8 saves, will delete 3
+  qu-lee@fulton58.org: 8 saves, will delete 3
+  hgould@missouri.edu: 8 saves, will delete 3
+  ra-kite@fulton58.org: 8 saves, will delete 3
+  ag-wells@fulton58.org: 8 saves, will delete 3
+  600024174@mhs: 8 saves, will delete 3
+  600018179@mhs: 6 saves, will delete 1
+  ky-hayes@fulton58.org: 6 saves, will delete 1
+  600017839@mhs: 6 saves, will delete 1
+  600017671@mhs: 6 saves, will delete 1
+
+=== Summary ===
+Users with >5 saves: 73
+Total saves to delete: 16152
+
+To proceed with deletion, run the deletion block below.
+
+
+rs0 [primary] strata_save> 

@@ -10,6 +10,16 @@
       <p class="text-sm text-gray-500 dark:text-gray-400 font-mono">{{ .Entry.RequestID }}</p>
     </div>
     <div class="flex items-center gap-2">
+      <!-- Timezone Selector -->
+      <select id="tz-select" class="text-sm border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded px-3 py-2">
+        {{ range .TimezoneGroups }}
+        <optgroup label="{{ .Region }}">
+          {{ range .Zones }}
+          <option value="{{ .ID }}">{{ .Label }}</option>
+          {{ end }}
+        </optgroup>
+        {{ end }}
+      </select>
       <a href="/ledger" class="px-4 py-2 border dark:border-gray-600 rounded text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">Back to Ledger</a>
       <form hx-post="/ledger/{{ .Entry.ID }}/delete" hx-confirm="Are you sure you want to delete this entry?">
         <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
@@ -57,10 +67,22 @@
         {{ end }}
       </dl>
 
-      {{ if .Entry.RequestBodyPreview }}
+      {{ if or .Entry.RequestBody .Entry.RequestBodyPreview }}
       <div class="mt-4">
-        <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Body Preview</h3>
-        <pre class="bg-gray-100 dark:bg-gray-700 p-2 rounded text-xs font-mono overflow-x-auto">{{ .Entry.RequestBodyPreview }}</pre>
+        <div class="flex items-center gap-2 mb-2">
+          <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ if .Entry.RequestBody }}Request Body{{ else }}Body Preview{{ end }}</h3>
+          <button type="button" onclick="openBodyModal()" class="hover:opacity-80 transition-opacity" title="View and download body">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none">
+              <!-- Document background -->
+              <path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2Z" fill="#60A5FA"/>
+              <!-- Folded corner -->
+              <path d="M14 2V8H20L14 2Z" fill="#3B82F6"/>
+              <!-- Download arrow -->
+              <path d="M12 11V17M12 17L9 14M12 17L15 14" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+        <pre class="bg-gray-100 dark:bg-gray-700 p-2 rounded text-xs font-mono overflow-x-auto max-h-32 overflow-y-auto">{{ or .Entry.RequestBody .Entry.RequestBodyPreview }}</pre>
       </div>
       {{ end }}
     </div>
@@ -128,35 +150,35 @@
       <dl class="space-y-2 text-sm">
         <div class="flex justify-between">
           <dt class="text-gray-500 dark:text-gray-400">Started At</dt>
-          <dd class="font-mono text-gray-700 dark:text-gray-300">{{ .Entry.StartedAt }}</dd>
+          <dd class="font-mono text-gray-700 dark:text-gray-300 tz-time" data-datetime="{{ .Entry.StartedAtISO }}">{{ .Entry.StartedAt }} UTC</dd>
         </div>
         <div class="flex justify-between">
           <dt class="text-gray-500 dark:text-gray-400">Completed At</dt>
-          <dd class="font-mono text-gray-700 dark:text-gray-300">{{ .Entry.CompletedAt }}</dd>
+          <dd class="font-mono text-gray-700 dark:text-gray-300 tz-time" data-datetime="{{ .Entry.CompletedAtISO }}">{{ .Entry.CompletedAt }} UTC</dd>
         </div>
         <div class="flex justify-between">
           <dt class="text-gray-500 dark:text-gray-400">Total Duration</dt>
           <dd class="font-mono font-bold text-gray-700 dark:text-gray-300">{{ .Entry.Duration }}</dd>
         </div>
-        {{ if gt .Entry.DecodeMs 0 }}
+        {{ if gt .Entry.DecodeMs 0.0 }}
         <div class="flex justify-between">
           <dt class="text-gray-500 dark:text-gray-400">Decode</dt>
           <dd class="font-mono text-gray-700 dark:text-gray-300">{{ printf "%.2f" .Entry.DecodeMs }}ms</dd>
         </div>
         {{ end }}
-        {{ if gt .Entry.ValidateMs 0 }}
+        {{ if gt .Entry.ValidateMs 0.0 }}
         <div class="flex justify-between">
           <dt class="text-gray-500 dark:text-gray-400">Validate</dt>
           <dd class="font-mono text-gray-700 dark:text-gray-300">{{ printf "%.2f" .Entry.ValidateMs }}ms</dd>
         </div>
         {{ end }}
-        {{ if gt .Entry.DBQueryMs 0 }}
+        {{ if gt .Entry.DBQueryMs 0.0 }}
         <div class="flex justify-between">
           <dt class="text-gray-500 dark:text-gray-400">Database</dt>
           <dd class="font-mono text-gray-700 dark:text-gray-300">{{ printf "%.2f" .Entry.DBQueryMs }}ms</dd>
         </div>
         {{ end }}
-        {{ if gt .Entry.EncodeMs 0 }}
+        {{ if gt .Entry.EncodeMs 0.0 }}
         <div class="flex justify-between">
           <dt class="text-gray-500 dark:text-gray-400">Encode</dt>
           <dd class="font-mono text-gray-700 dark:text-gray-300">{{ printf "%.2f" .Entry.EncodeMs }}ms</dd>
@@ -211,4 +233,157 @@
     </dl>
   </div>
 </div>
+
+<script>
+// Timezone handling
+(function() {
+  var tzSelect = document.getElementById('tz-select');
+  if (!tzSelect) return;
+
+  var STORAGE_KEY = 'ledger_timezone';
+
+  // Detect browser timezone
+  var browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  // Get stored timezone or use browser timezone
+  var storedTz = localStorage.getItem(STORAGE_KEY);
+  var currentTz = storedTz || browserTz;
+
+  // Find the closest match in our select options
+  function findTimezoneOption(tz) {
+    var options = tzSelect.options;
+    for (var i = 0; i < options.length; i++) {
+      if (options[i].value === tz) {
+        return tz;
+      }
+    }
+    // Try prefix match
+    var prefix = tz.split('/')[0];
+    for (var i = 0; i < options.length; i++) {
+      if (options[i].value.startsWith(prefix + '/')) {
+        return options[i].value;
+      }
+    }
+    // Default to UTC if no match
+    return 'UTC';
+  }
+
+  // Set initial selection
+  var selectedTz = findTimezoneOption(currentTz);
+  tzSelect.value = selectedTz;
+
+  // Format all timestamps in selected timezone
+  function formatTimestamps(tz) {
+    document.querySelectorAll('.tz-time').forEach(function(el) {
+      var iso = el.getAttribute('data-datetime');
+      if (!iso) return;
+
+      try {
+        var date = new Date(iso);
+        var formatted = date.toLocaleString('en-US', {
+          timeZone: tz,
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false,
+          timeZoneName: 'short'
+        });
+        el.textContent = formatted;
+      } catch (e) {
+        // Keep original text on error
+      }
+    });
+  }
+
+  // Initial format
+  formatTimestamps(selectedTz);
+
+  // Handle timezone changes
+  tzSelect.addEventListener('change', function() {
+    currentTz = tzSelect.value;
+    localStorage.setItem(STORAGE_KEY, currentTz);
+    formatTimestamps(currentTz);
+  });
+})();
+
+// Body Preview Modal Functions
+function openBodyModal() {
+  document.getElementById('body-modal').classList.remove('hidden');
+  document.body.classList.add('overflow-hidden');
+}
+
+function closeBodyModal() {
+  document.getElementById('body-modal').classList.add('hidden');
+  document.body.classList.remove('overflow-hidden');
+}
+
+function downloadBody() {
+  var content = document.getElementById('body-content').textContent;
+  var blob = new Blob([content], { type: 'application/json' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'request-body-{{ .Entry.RequestID }}.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// Close modal on escape key
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    closeBodyModal();
+  }
+});
+</script>
+
+{{ if or .Entry.RequestBody .Entry.RequestBodyPreview }}
+<!-- Body Modal -->
+<div id="body-modal" class="hidden fixed inset-0 z-50">
+  <!-- Backdrop -->
+  <div class="fixed inset-0 bg-black/50" onclick="closeBodyModal()"></div>
+  <!-- Modal Content Wrapper -->
+  <div class="fixed inset-0 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl border dark:border-gray-700 w-full max-w-4xl flex flex-col" style="max-height: 80vh;">
+      <!-- Header -->
+      <div class="flex items-center justify-between p-4 border-b dark:border-gray-700 flex-shrink-0">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Request Body</h3>
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="downloadBody()" class="px-3 py-1.5 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700 flex items-center gap-1">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+            </svg>
+            Download
+          </button>
+          <button type="button" onclick="closeBodyModal()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Body Content - Scrollable -->
+      <div class="p-4 overflow-auto flex-grow">
+        <pre id="body-content" class="bg-gray-100 dark:bg-gray-700 p-4 rounded text-sm font-mono overflow-x-auto" style="white-space: pre-wrap; word-break: break-all;">{{ or .Entry.RequestBody .Entry.RequestBodyPreview }}</pre>
+      </div>
+
+      <!-- Footer -->
+      <div class="p-4 border-t dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
+        {{ if .Entry.RequestBody }}
+        Full body content ({{ .Entry.RequestBodySize }} bytes)
+        {{ else if gt .Entry.RequestBodySize 500 }}
+        <span class="text-yellow-600 dark:text-yellow-400">Note: This is a preview of the first 500 characters. Full body was not captured. Total body size: {{ .Entry.RequestBodySize }} bytes.</span>
+        {{ else }}
+        Full body content ({{ .Entry.RequestBodySize }} bytes)
+        {{ end }}
+      </div>
+    </div>
+  </div>
+</div>
+{{ end }}
 {{ end }}

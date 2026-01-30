@@ -26,6 +26,9 @@ storage_type = "local"
 storage_local_path = "./uploads"
 storage_local_url = "/files"
 
+# API key for external API access (State API, Settings API)
+api_key = "dev-test-api-key-for-local-development"
+
 # Audit logging
 audit_log_auth = "all"
 audit_log_admin = "all"

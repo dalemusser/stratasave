@@ -313,15 +313,11 @@ func TestFormParsing(t *testing.T) {
 
 func TestLoginVM_Fields(t *testing.T) {
 	vm := LoginVM{
-		GoogleEnabled: true,
-		Error:         "Test error",
-		LoginID:       "test@example.com",
-		ReturnURL:     "/dashboard",
+		Error:     "Test error",
+		LoginID:   "test@example.com",
+		ReturnURL: "/dashboard",
 	}
 
-	if !vm.GoogleEnabled {
-		t.Error("GoogleEnabled should be true")
-	}
 	if vm.Error != "Test error" {
 		t.Errorf("Error = %q, want %q", vm.Error, "Test error")
 	}
@@ -348,10 +344,13 @@ func TestPasswordLoginVM_Fields(t *testing.T) {
 	}
 }
 
-func TestEmailVerifyVM_Fields(t *testing.T) {
-	vm := EmailVerifyVM{
-		Error: "Invalid code",
-		Email: "verify@test.com",
+func TestVerifyEmailVM_Fields(t *testing.T) {
+	vm := VerifyEmailVM{
+		Error:     "Invalid code",
+		Email:     "verify@test.com",
+		LoginID:   "verify@test.com",
+		ReturnURL: "/dashboard",
+		Resent:    true,
 	}
 
 	if vm.Error != "Invalid code" {
@@ -359,6 +358,15 @@ func TestEmailVerifyVM_Fields(t *testing.T) {
 	}
 	if vm.Email != "verify@test.com" {
 		t.Errorf("Email = %q, want %q", vm.Email, "verify@test.com")
+	}
+	if vm.LoginID != "verify@test.com" {
+		t.Errorf("LoginID = %q, want %q", vm.LoginID, "verify@test.com")
+	}
+	if vm.ReturnURL != "/dashboard" {
+		t.Errorf("ReturnURL = %q, want %q", vm.ReturnURL, "/dashboard")
+	}
+	if !vm.Resent {
+		t.Error("Resent = false, want true")
 	}
 }
 
@@ -396,7 +404,6 @@ func TestNewHandler(t *testing.T) {
 		nil, // rateLimitStore (nil = disabled)
 		"http://localhost:8080",
 		10*time.Minute,
-		false, // googleEnabled
 		false, // trustLoginEnabled
 		logger,
 	)
@@ -406,9 +413,6 @@ func TestNewHandler(t *testing.T) {
 	}
 	if h.baseURL != "http://localhost:8080" {
 		t.Errorf("baseURL = %q, want %q", h.baseURL, "http://localhost:8080")
-	}
-	if h.googleEnabled {
-		t.Error("googleEnabled should be false")
 	}
 	if h.trustLoginEnabled {
 		t.Error("trustLoginEnabled should be false")
@@ -420,7 +424,7 @@ func TestRoutes_TrustLoginEnabled(t *testing.T) {
 	logger := zap.NewNop()
 
 	// Test with trust login enabled
-	h := NewHandler(db, nil, nil, nil, nil, nil, nil, nil, "", 0, false, true, logger)
+	h := NewHandler(db, nil, nil, nil, nil, nil, nil, nil, "", 0, true, logger)
 	routes := Routes(h)
 
 	if routes == nil {
@@ -433,7 +437,7 @@ func TestRoutes_TrustLoginDisabled(t *testing.T) {
 	logger := zap.NewNop()
 
 	// Test with trust login disabled
-	h := NewHandler(db, nil, nil, nil, nil, nil, nil, nil, "", 0, false, false, logger)
+	h := NewHandler(db, nil, nil, nil, nil, nil, nil, nil, "", 0, false, logger)
 	routes := Routes(h)
 
 	if routes == nil {

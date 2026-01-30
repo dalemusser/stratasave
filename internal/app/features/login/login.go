@@ -8,6 +8,7 @@ package login
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	errorsfeature "github.com/dalemusser/stratasave/internal/app/features/errors"
@@ -17,6 +18,7 @@ import (
 	"github.com/dalemusser/stratasave/internal/app/store/ratelimit"
 	"github.com/dalemusser/stratasave/internal/app/store/sessions"
 	userstore "github.com/dalemusser/stratasave/internal/app/store/users"
+	"github.com/dalemusser/stratasave/internal/domain/models"
 	"github.com/dalemusser/stratasave/internal/app/system/auth"
 	"github.com/dalemusser/stratasave/internal/app/system/auditlog"
 	"github.com/dalemusser/stratasave/internal/app/system/authutil"
@@ -46,7 +48,6 @@ type Handler struct {
 	auditLogger        *auditlog.Logger
 	baseURL            string
 	emailVerifyExpiry  time.Duration
-	googleEnabled      bool
 	trustLoginEnabled  bool // Only enable in dev mode for security
 	logger             *zap.Logger
 }
@@ -65,7 +66,6 @@ func NewHandler(
 	rateLimitStore *ratelimit.Store,
 	baseURL string,
 	emailVerifyExpiry time.Duration,
-	googleEnabled bool,
 	trustLoginEnabled bool,
 	logger *zap.Logger,
 ) *Handler {
@@ -88,7 +88,6 @@ func NewHandler(
 		auditLogger:        auditLogger,
 		baseURL:            baseURL,
 		emailVerifyExpiry:  emailVerifyExpiry,
-		googleEnabled:      googleEnabled,
 		trustLoginEnabled:  trustLoginEnabled,
 		logger:             logger,
 	}
@@ -97,10 +96,9 @@ func NewHandler(
 // LoginVM is the view model for the login page.
 type LoginVM struct {
 	viewdata.BaseVM
-	GoogleEnabled bool
-	Error         string
-	LoginID       string
-	ReturnURL     string
+	Error     string
+	LoginID   string
+	ReturnURL string
 }
 
 // Routes returns a chi.Router with login routes mounted.
@@ -128,22 +126,36 @@ func Routes(h *Handler) http.Handler {
 	r.Post("/reset-password", h.handleResetPassword)
 
 	// Email verification auth
-	r.Get("/email", h.showEmailLogin)
-	r.Post("/email", h.handleEmailLogin)
-	r.Get("/email/verify", h.showEmailVerify)
-	r.Post("/email/verify", h.handleEmailVerify)
-	r.Get("/email/magic", h.handleMagicLink)
+	r.Get("/verify-email", h.showVerifyEmail)
+	r.Post("/verify-email", h.handleVerifyEmailSubmit)
+	r.Post("/resend-code", h.handleResendCode)
 
 	return r
 }
 
 // showLogin displays the login page with login_id field.
 func (h *Handler) showLogin(w http.ResponseWriter, r *http.Request) {
+	// Map error codes to user-friendly messages
+	errorCode := r.URL.Query().Get("error")
+	errorMsg := ""
+	switch errorCode {
+	case "invalid_token":
+		errorMsg = "Invalid or expired link. Please try again."
+	case "account_disabled":
+		errorMsg = "Account is disabled."
+	case "service_unavailable":
+		errorMsg = "Service temporarily unavailable. Please try again."
+	case "":
+		// No error
+	default:
+		// Show the error code as-is for unknown codes
+		errorMsg = errorCode
+	}
+
 	vm := LoginVM{
 		BaseVM:        viewdata.New(r),
-		GoogleEnabled: h.googleEnabled,
 		ReturnURL:     query.Get(r, "return"),
-		Error:         r.URL.Query().Get("error"),
+		Error:         errorMsg,
 	}
 	vm.Title = "Login"
 
@@ -164,8 +176,7 @@ func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 	if loginID == "" {
 		vm := LoginVM{
 			BaseVM:        viewdata.New(r),
-			GoogleEnabled: h.googleEnabled,
-			Error:         "Please enter your Login ID",
+				Error:         "Please enter your Login ID",
 			ReturnURL:     returnURL,
 		}
 		vm.Title = "Login"
@@ -176,12 +187,25 @@ func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 	// Look up user by login_id
 	user, err := h.userStore.GetByLoginID(r.Context(), loginID)
 	if err != nil {
-		// User not found - show error
-		h.auditLogger.LoginFailedUserNotFound(r.Context(), r, loginID)
+		// Distinguish between "user not found" and database errors
+		if err == mongo.ErrNoDocuments {
+			// User not found - show error
+			h.auditLogger.LoginFailedUserNotFound(r.Context(), r, loginID)
+			vm := LoginVM{
+				BaseVM:        viewdata.New(r),
+						Error:         "User not found",
+				LoginID:       loginID,
+				ReturnURL:     returnURL,
+			}
+			vm.Title = "Login"
+			templates.Render(w, r, "login/index", vm)
+			return
+		}
+		// Database error (timeout, connection failure, etc.)
+		h.errLog.Log(r, "database error during login lookup", err)
 		vm := LoginVM{
 			BaseVM:        viewdata.New(r),
-			GoogleEnabled: h.googleEnabled,
-			Error:         "User not found",
+				Error:         "Service temporarily unavailable. Please try again.",
 			LoginID:       loginID,
 			ReturnURL:     returnURL,
 		}
@@ -194,8 +218,7 @@ func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 		h.auditLogger.LogAuthEvent(r, &user.ID, "login_failed_user_disabled", false, "user disabled")
 		vm := LoginVM{
 			BaseVM:        viewdata.New(r),
-			GoogleEnabled: h.googleEnabled,
-			Error:         "Account is disabled",
+				Error:         "Account is disabled",
 			LoginID:       loginID,
 			ReturnURL:     returnURL,
 		}
@@ -223,7 +246,8 @@ func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 	case "password":
 		http.Redirect(w, r, "/login/password?login_id="+loginID+returnParam, http.StatusSeeOther)
 	case "email":
-		http.Redirect(w, r, "/login/email?login_id="+loginID+returnParam, http.StatusSeeOther)
+		// Email verification: send code and redirect to verification page
+		h.startEmailFlow(w, r, user, returnURL)
 	case "google":
 		http.Redirect(w, r, "/auth/google"+returnParam, http.StatusSeeOther)
 	default:
@@ -261,11 +285,22 @@ func (h *Handler) handleTrustLogin(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.userStore.GetByLoginID(r.Context(), loginID)
 	if err != nil {
-		h.auditLogger.LoginFailedUserNotFound(r.Context(), r, loginID)
-
+		// Distinguish between "user not found" and database errors
+		if err == mongo.ErrNoDocuments {
+			h.auditLogger.LoginFailedUserNotFound(r.Context(), r, loginID)
+			vm := TrustLoginVM{
+				BaseVM:  viewdata.New(r),
+				Error:   "User not found",
+				LoginID: loginID,
+			}
+			templates.Render(w, r, "login/trust", vm)
+			return
+		}
+		// Database error
+		h.errLog.Log(r, "database error during trust login lookup", err)
 		vm := TrustLoginVM{
 			BaseVM:  viewdata.New(r),
-			Error:   "User not found",
+			Error:   "Service temporarily unavailable. Please try again.",
 			LoginID: loginID,
 		}
 		templates.Render(w, r, "login/trust", vm)
@@ -357,16 +392,30 @@ func (h *Handler) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.userStore.GetByLoginID(r.Context(), loginID)
 	if err != nil {
-		// Record failure for rate limiting (even though user doesn't exist)
-		if h.rateLimitStore != nil {
-			h.rateLimitStore.RecordFailure(r.Context(), loginID)
-		}
-		h.auditLogger.LoginFailedUserNotFound(r.Context(), r, loginID)
+		// Distinguish between "user not found" and database errors
+		if err == mongo.ErrNoDocuments {
+			// Record failure for rate limiting (even though user doesn't exist)
+			if h.rateLimitStore != nil {
+				h.rateLimitStore.RecordFailure(r.Context(), loginID)
+			}
+			h.auditLogger.LoginFailedUserNotFound(r.Context(), r, loginID)
 
+			vm := PasswordLoginVM{
+				BaseVM:    viewdata.New(r),
+				Error:     "Invalid credentials",
+				LoginID:   loginID,
+				ReturnURL: returnURL,
+			}
+			templates.Render(w, r, "login/password", vm)
+			return
+		}
+		// Database error
+		h.errLog.Log(r, "database error during password login lookup", err)
 		vm := PasswordLoginVM{
-			BaseVM:  viewdata.New(r),
-			Error:   "Invalid credentials",
-			LoginID: loginID,
+			BaseVM:    viewdata.New(r),
+			Error:     "Service temporarily unavailable. Please try again.",
+			LoginID:   loginID,
+			ReturnURL: returnURL,
 		}
 		templates.Render(w, r, "login/password", vm)
 		return
@@ -445,179 +494,6 @@ func (h *Handler) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, urlutil.SafeReturn(returnURL, "", "/dashboard"), http.StatusSeeOther)
-}
-
-// EmailLoginVM is the view model for email login.
-type EmailLoginVM struct {
-	viewdata.BaseVM
-	Error string
-	Email string
-}
-
-// showEmailLogin displays the email login form.
-func (h *Handler) showEmailLogin(w http.ResponseWriter, r *http.Request) {
-	vm := EmailLoginVM{
-		BaseVM: viewdata.New(r),
-	}
-	vm.Title = "Email Login"
-
-	templates.Render(w, r, "login/email", vm)
-}
-
-// handleEmailLogin sends a verification code to the email.
-func (h *Handler) handleEmailLogin(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseForm(); err != nil {
-		h.errLog.Log(r, "failed to parse form", err)
-		http.Error(w, "Bad Request", http.StatusBadRequest)
-		return
-	}
-
-	email := r.FormValue("email")
-
-	user, err := h.userStore.GetByEmail(r.Context(), email)
-	if err != nil {
-		// Don't reveal if email exists
-		h.auditLogger.LogAuthEvent(r, nil, "verification_code_sent", true, "")
-		http.Redirect(w, r, "/login/email/verify?email="+email, http.StatusSeeOther)
-		return
-	}
-
-	if user.Status != "active" {
-		h.auditLogger.LogAuthEvent(r, &user.ID, "login_failed_user_disabled", false, "user disabled")
-		http.Redirect(w, r, "/login/email/verify?email="+email, http.StatusSeeOther)
-		return
-	}
-
-	// Generate and send verification code
-	verification, err := h.emailVerifyStore.Create(r.Context(), email, user.ID)
-	if err != nil {
-		h.errLog.Log(r, "failed to create verification", err)
-		http.Redirect(w, r, "/login/email/verify?email="+email, http.StatusSeeOther)
-		return
-	}
-
-	// Send email with code
-	if h.mailer != nil {
-		magicURL := h.baseURL + "/login/email/magic?token=" + verification.Token
-		textBody, htmlBody := mailer.LoginCodeEmail(mailer.LoginCodeEmailData{
-			AppName:  h.mailer.FromName(),
-			Code:     verification.Code,
-			MagicURL: magicURL,
-		})
-		err = h.mailer.Send(mailer.Email{
-			To:       email,
-			Subject:  "Your Login Code",
-			TextBody: textBody,
-			HTMLBody: htmlBody,
-		})
-		if err != nil {
-			h.errLog.Log(r, "failed to send verification email", err)
-		}
-	}
-
-	h.auditLogger.LogAuthEvent(r, &user.ID, "verification_code_sent", true, "")
-
-	http.Redirect(w, r, "/login/email/verify?email="+email, http.StatusSeeOther)
-}
-
-// EmailVerifyVM is the view model for email verification.
-type EmailVerifyVM struct {
-	viewdata.BaseVM
-	Error string
-	Email string
-}
-
-// showEmailVerify displays the email verification form.
-func (h *Handler) showEmailVerify(w http.ResponseWriter, r *http.Request) {
-	vm := EmailVerifyVM{
-		BaseVM: viewdata.New(r),
-		Email:  r.URL.Query().Get("email"),
-	}
-	vm.Title = "Verify Email"
-
-	templates.Render(w, r, "login/email_verify", vm)
-}
-
-// handleEmailVerify verifies the code and logs in.
-func (h *Handler) handleEmailVerify(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseForm(); err != nil {
-		h.errLog.Log(r, "failed to parse form", err)
-		http.Error(w, "Bad Request", http.StatusBadRequest)
-		return
-	}
-
-	email := r.FormValue("email")
-	code := r.FormValue("code")
-
-	verification, err := h.emailVerifyStore.VerifyCode(r.Context(), email, code)
-	if err != nil {
-		h.auditLogger.LogAuthEvent(r, nil, "verification_code_failed", false, "invalid code")
-
-		vm := EmailVerifyVM{
-			BaseVM: viewdata.New(r),
-			Error:  "Invalid or expired code",
-			Email:  email,
-		}
-		templates.Render(w, r, "login/email_verify", vm)
-		return
-	}
-
-	user, err := h.userStore.GetByID(r.Context(), verification.UserID)
-	if err != nil || user.Status != "active" {
-		vm := EmailVerifyVM{
-			BaseVM: viewdata.New(r),
-			Error:  "Account not found or disabled",
-			Email:  email,
-		}
-		templates.Render(w, r, "login/email_verify", vm)
-		return
-	}
-
-	// Mark verification as used
-	h.emailVerifyStore.MarkUsed(r.Context(), verification.ID)
-
-	// Create session
-	if err := h.createTrackedSession(w, r, user.ID, user.Role); err != nil {
-		h.errLog.Log(r, "failed to create session", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-
-	h.auditLogger.LogAuthEvent(r, &user.ID, "login_success", true, "")
-
-	http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
-}
-
-// handleMagicLink handles magic link login.
-func (h *Handler) handleMagicLink(w http.ResponseWriter, r *http.Request) {
-	token := r.URL.Query().Get("token")
-
-	verification, err := h.emailVerifyStore.VerifyToken(r.Context(), token)
-	if err != nil {
-		h.auditLogger.LogAuthEvent(r, nil, "magic_link_failed", false, "invalid token")
-		http.Redirect(w, r, "/login?error=invalid_token", http.StatusSeeOther)
-		return
-	}
-
-	user, err := h.userStore.GetByID(r.Context(), verification.UserID)
-	if err != nil || user.Status != "active" {
-		http.Redirect(w, r, "/login?error=account_disabled", http.StatusSeeOther)
-		return
-	}
-
-	// Mark verification as used
-	h.emailVerifyStore.MarkUsed(r.Context(), verification.ID)
-
-	// Create session
-	if err := h.createTrackedSession(w, r, user.ID, user.Role); err != nil {
-		h.errLog.Log(r, "failed to create session", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-
-	h.auditLogger.LogAuthEvent(r, &user.ID, "magic_link_used", true, "")
-
-	http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
 }
 
 // ForgotPasswordVM is the view model for forgot password.
@@ -921,4 +797,425 @@ func (h *Handler) createTrackedSession(w http.ResponseWriter, r *http.Request, u
 	}
 
 	return nil
+}
+
+/*─────────────────────────────────────────────────────────────────────────────*
+| Email verification flow (StrataHub-style)                                    |
+*─────────────────────────────────────────────────────────────────────────────*/
+
+// startEmailFlow creates a verification code/token and sends the email.
+// This is called from handleLogin when user's auth_method is "email".
+func (h *Handler) startEmailFlow(w http.ResponseWriter, r *http.Request, user *models.User, returnURL string) {
+	// Get email from user - for email auth, the login_id IS the email
+	email := ""
+	loginID := ""
+	if user.LoginID != nil {
+		loginID = *user.LoginID
+		email = loginID
+	}
+	if email == "" {
+		h.logger.Error("email auth user has no login_id/email", zap.String("user_id", user.ID.Hex()))
+		vm := LoginVM{
+			BaseVM:        viewdata.New(r),
+				Error:         "No email address found for this account.",
+			ReturnURL:     returnURL,
+		}
+		vm.Title = "Login"
+		templates.Render(w, r, "login/index", vm)
+		return
+	}
+
+	// Create verification record
+	verification, err := h.emailVerifyStore.Create(r.Context(), email, user.ID)
+	if err != nil {
+		h.errLog.Log(r, "failed to create email verification", err)
+		vm := LoginVM{
+			BaseVM:        viewdata.New(r),
+				Error:         "Failed to send verification email. Please try again.",
+			LoginID:       email,
+			ReturnURL:     returnURL,
+		}
+		vm.Title = "Login"
+		templates.Render(w, r, "login/index", vm)
+		return
+	}
+
+	// Send email with code and magic link
+	if h.mailer != nil {
+		magicURL := h.baseURL + "/login/verify-email?token=" + verification.Token
+		textBody, htmlBody := mailer.LoginCodeEmail(mailer.LoginCodeEmailData{
+			AppName:  h.mailer.FromName(),
+			Code:     verification.Code,
+			MagicURL: magicURL,
+		})
+		err = h.mailer.Send(mailer.Email{
+			To:       email,
+			Subject:  "Your Login Code",
+			TextBody: textBody,
+			HTMLBody: htmlBody,
+		})
+		if err != nil {
+			h.errLog.Log(r, "failed to send verification email", err)
+			// Continue anyway - user can request resend
+		}
+	}
+
+	h.logger.Info("verification email sent", zap.String("email", email), zap.String("user_id", user.ID.Hex()))
+	h.auditLogger.LogAuthEvent(r, &user.ID, "verification_code_sent", true, "")
+
+	// Store pending email login in session
+	sess, err := h.sessionMgr.GetSession(r)
+	if err != nil {
+		h.logger.Warn("session error, using fresh session", zap.Error(err))
+	}
+
+	// Store pending login state
+	sess.Values["pending_user_id"] = user.ID.Hex()
+	sess.Values["pending_login_id"] = loginID
+	sess.Values["pending_email"] = email
+	sess.Values["pending_return_url"] = returnURL
+
+	// Ensure not authenticated yet
+	delete(sess.Values, "is_authenticated")
+	delete(sess.Values, "user_id")
+
+	if err := sess.Save(r, w); err != nil {
+		h.errLog.Log(r, "failed to save session", err)
+		vm := LoginVM{
+			BaseVM:        viewdata.New(r),
+				Error:         "Unable to create session. Please try again.",
+			LoginID:       email,
+			ReturnURL:     returnURL,
+		}
+		vm.Title = "Login"
+		templates.Render(w, r, "login/index", vm)
+		return
+	}
+
+	http.Redirect(w, r, "/login/verify-email", http.StatusSeeOther)
+}
+
+// VerifyEmailVM is the view model for the email verification page (StrataHub-style).
+type VerifyEmailVM struct {
+	viewdata.BaseVM
+	Error     string
+	LoginID   string
+	Email     string
+	ReturnURL string
+	Resent    bool
+}
+
+// showVerifyEmail handles both magic link verification and showing the code entry form.
+// GET /login/verify-email
+func (h *Handler) showVerifyEmail(w http.ResponseWriter, r *http.Request) {
+	// Check for magic link token in query params
+	token := r.URL.Query().Get("token")
+	if token != "" {
+		h.handleMagicLinkVerify(w, r, token)
+		return
+	}
+
+	// No token - show code entry form
+	sess, err := h.sessionMgr.GetSession(r)
+	if err != nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	// Check for pending email login
+	pendingUserID, ok1 := sess.Values["pending_user_id"].(string)
+	pendingLoginID, ok2 := sess.Values["pending_login_id"].(string)
+	pendingEmail, ok3 := sess.Values["pending_email"].(string)
+	if !ok1 || !ok2 || !ok3 || pendingUserID == "" {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	returnURL, _ := sess.Values["pending_return_url"].(string)
+
+	// Check if code was just resent (for success message)
+	resent := r.URL.Query().Get("resent") == "1"
+
+	vm := VerifyEmailVM{
+		BaseVM:    viewdata.New(r),
+		LoginID:   pendingLoginID,
+		Email:     pendingEmail,
+		ReturnURL: returnURL,
+		Resent:    resent,
+	}
+	vm.Title = "Check Your Email"
+
+	templates.Render(w, r, "login/verify_email", vm)
+}
+
+// handleMagicLinkVerify verifies a magic link token and completes login.
+func (h *Handler) handleMagicLinkVerify(w http.ResponseWriter, r *http.Request, token string) {
+	verification, err := h.emailVerifyStore.VerifyToken(r.Context(), token)
+	if err != nil {
+		h.auditLogger.LogAuthEvent(r, nil, "magic_link_failed", false, "invalid token")
+		vm := VerifyEmailVM{
+			BaseVM: viewdata.New(r),
+			Error:  "This verification link is invalid or has expired. Please request a new one.",
+		}
+		vm.Title = "Check Your Email"
+		templates.Render(w, r, "login/verify_email", vm)
+		return
+	}
+
+	// Load user
+	user, err := h.userStore.GetByID(r.Context(), verification.UserID)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			vm := VerifyEmailVM{
+				BaseVM: viewdata.New(r),
+				Error:  "Account not found. Please try again.",
+			}
+			vm.Title = "Check Your Email"
+			templates.Render(w, r, "login/verify_email", vm)
+			return
+		}
+		h.errLog.Log(r, "database error during magic link user lookup", err)
+		vm := VerifyEmailVM{
+			BaseVM: viewdata.New(r),
+			Error:  "Service temporarily unavailable. Please try again.",
+		}
+		vm.Title = "Check Your Email"
+		templates.Render(w, r, "login/verify_email", vm)
+		return
+	}
+
+	if user.Status != "active" {
+		vm := VerifyEmailVM{
+			BaseVM: viewdata.New(r),
+			Error:  "Account is disabled.",
+		}
+		vm.Title = "Check Your Email"
+		templates.Render(w, r, "login/verify_email", vm)
+		return
+	}
+
+	// Mark verification as used
+	h.emailVerifyStore.MarkUsed(r.Context(), verification.ID)
+
+	// Get return URL from session if available
+	returnURL := ""
+	sess, err := h.sessionMgr.GetSession(r)
+	if err == nil {
+		returnURL, _ = sess.Values["pending_return_url"].(string)
+		// Clear pending state
+		delete(sess.Values, "pending_user_id")
+		delete(sess.Values, "pending_login_id")
+		delete(sess.Values, "pending_email")
+		delete(sess.Values, "pending_return_url")
+		sess.Save(r, w)
+	}
+
+	h.logger.Info("user logged in via magic link", zap.String("user_id", user.ID.Hex()), zap.String("email", verification.Email))
+	h.auditLogger.LogAuthEvent(r, &user.ID, "magic_link_used", true, "")
+
+	// Create session
+	if err := h.createTrackedSession(w, r, user.ID, user.Role); err != nil {
+		h.errLog.Log(r, "failed to create session", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, urlutil.SafeReturn(returnURL, "", "/dashboard"), http.StatusSeeOther)
+}
+
+// handleVerifyEmailSubmit validates the verification code and completes login.
+// POST /login/verify-email
+func (h *Handler) handleVerifyEmailSubmit(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		h.errLog.Log(r, "failed to parse form", err)
+		http.Error(w, "Bad Request", http.StatusBadRequest)
+		return
+	}
+
+	sess, err := h.sessionMgr.GetSession(r)
+	if err != nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	// Check for pending email login
+	pendingUserID, ok1 := sess.Values["pending_user_id"].(string)
+	pendingLoginID, ok2 := sess.Values["pending_login_id"].(string)
+	pendingEmail, ok3 := sess.Values["pending_email"].(string)
+	returnURL, _ := sess.Values["pending_return_url"].(string)
+	if !ok1 || !ok2 || !ok3 || pendingUserID == "" {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	code := strings.TrimSpace(r.FormValue("code"))
+	if code == "" {
+		vm := VerifyEmailVM{
+			BaseVM:    viewdata.New(r),
+			Error:     "Please enter the verification code.",
+			LoginID:   pendingLoginID,
+			Email:     pendingEmail,
+			ReturnURL: returnURL,
+		}
+		vm.Title = "Check Your Email"
+		templates.Render(w, r, "login/verify_email", vm)
+		return
+	}
+
+	// Verify the code
+	verification, err := h.emailVerifyStore.VerifyCode(r.Context(), pendingEmail, code)
+	if err != nil {
+		h.auditLogger.LogAuthEvent(r, nil, "verification_code_failed", false, "invalid code")
+		vm := VerifyEmailVM{
+			BaseVM:    viewdata.New(r),
+			Error:     "Invalid or expired verification code. Please try again.",
+			LoginID:   pendingLoginID,
+			Email:     pendingEmail,
+			ReturnURL: returnURL,
+		}
+		vm.Title = "Check Your Email"
+		templates.Render(w, r, "login/verify_email", vm)
+		return
+	}
+
+	// Load user
+	user, err := h.userStore.GetByID(r.Context(), verification.UserID)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			vm := VerifyEmailVM{
+				BaseVM:    viewdata.New(r),
+				Error:     "Account not found. Please try again.",
+				LoginID:   pendingLoginID,
+				Email:     pendingEmail,
+				ReturnURL: returnURL,
+			}
+			vm.Title = "Check Your Email"
+			templates.Render(w, r, "login/verify_email", vm)
+			return
+		}
+		h.errLog.Log(r, "database error during code verification user lookup", err)
+		vm := VerifyEmailVM{
+			BaseVM:    viewdata.New(r),
+			Error:     "Service temporarily unavailable. Please try again.",
+			LoginID:   pendingLoginID,
+			Email:     pendingEmail,
+			ReturnURL: returnURL,
+		}
+		vm.Title = "Check Your Email"
+		templates.Render(w, r, "login/verify_email", vm)
+		return
+	}
+
+	if user.Status != "active" {
+		vm := VerifyEmailVM{
+			BaseVM:    viewdata.New(r),
+			Error:     "Account is disabled.",
+			LoginID:   pendingLoginID,
+			Email:     pendingEmail,
+			ReturnURL: returnURL,
+		}
+		vm.Title = "Check Your Email"
+		templates.Render(w, r, "login/verify_email", vm)
+		return
+	}
+
+	// Mark verification as used
+	h.emailVerifyStore.MarkUsed(r.Context(), verification.ID)
+
+	// Clear pending state from session
+	delete(sess.Values, "pending_user_id")
+	delete(sess.Values, "pending_login_id")
+	delete(sess.Values, "pending_email")
+	delete(sess.Values, "pending_return_url")
+	sess.Save(r, w)
+
+	h.logger.Info("user logged in via verification code", zap.String("user_id", user.ID.Hex()), zap.String("email", pendingEmail))
+	h.auditLogger.LogAuthEvent(r, &user.ID, "login_success", true, "")
+
+	// Create session
+	if err := h.createTrackedSession(w, r, user.ID, user.Role); err != nil {
+		h.errLog.Log(r, "failed to create session", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, urlutil.SafeReturn(returnURL, "", "/dashboard"), http.StatusSeeOther)
+}
+
+// handleResendCode resends the verification email.
+// POST /login/resend-code
+func (h *Handler) handleResendCode(w http.ResponseWriter, r *http.Request) {
+	sess, err := h.sessionMgr.GetSession(r)
+	if err != nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	// Check for pending email login
+	pendingUserID, ok1 := sess.Values["pending_user_id"].(string)
+	pendingEmail, ok2 := sess.Values["pending_email"].(string)
+	returnURL, _ := sess.Values["pending_return_url"].(string)
+	pendingLoginID, _ := sess.Values["pending_login_id"].(string)
+	if !ok1 || !ok2 || pendingUserID == "" {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	// Parse user ID
+	userID, err := primitive.ObjectIDFromHex(pendingUserID)
+	if err != nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	// Create new verification record
+	verification, err := h.emailVerifyStore.Create(r.Context(), pendingEmail, userID)
+	if err != nil {
+		h.errLog.Log(r, "failed to create email verification for resend", err)
+		vm := VerifyEmailVM{
+			BaseVM:    viewdata.New(r),
+			Error:     "Failed to resend verification email. Please try again.",
+			LoginID:   pendingLoginID,
+			Email:     pendingEmail,
+			ReturnURL: returnURL,
+		}
+		vm.Title = "Check Your Email"
+		templates.Render(w, r, "login/verify_email", vm)
+		return
+	}
+
+	// Send email with code and magic link
+	if h.mailer != nil {
+		magicURL := h.baseURL + "/login/verify-email?token=" + verification.Token
+		textBody, htmlBody := mailer.LoginCodeEmail(mailer.LoginCodeEmailData{
+			AppName:  h.mailer.FromName(),
+			Code:     verification.Code,
+			MagicURL: magicURL,
+		})
+		err = h.mailer.Send(mailer.Email{
+			To:       pendingEmail,
+			Subject:  "Your Login Code",
+			TextBody: textBody,
+			HTMLBody: htmlBody,
+		})
+		if err != nil {
+			h.errLog.Log(r, "failed to resend verification email", err)
+			vm := VerifyEmailVM{
+				BaseVM:    viewdata.New(r),
+				Error:     "Failed to resend verification email. Please try again.",
+				LoginID:   pendingLoginID,
+				Email:     pendingEmail,
+				ReturnURL: returnURL,
+			}
+			vm.Title = "Check Your Email"
+			templates.Render(w, r, "login/verify_email", vm)
+			return
+		}
+	}
+
+	h.logger.Info("verification email resent", zap.String("email", pendingEmail), zap.String("user_id", pendingUserID))
+	h.auditLogger.LogAuthEvent(r, &userID, "verification_code_sent", true, "resend")
+
+	// Redirect back to verify page with success indicator
+	http.Redirect(w, r, "/login/verify-email?resent=1", http.StatusSeeOther)
 }

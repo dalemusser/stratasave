@@ -84,6 +84,12 @@ var appConfigKeys = []config.AppKey{
 	// Admin seeding configuration
 	{Name: "seed_admin_email", Default: "", Desc: "Email of admin user to create on startup"},
 	{Name: "seed_admin_name", Default: "Admin", Desc: "Name of admin user to create on startup"},
+
+	// Save retention configuration
+	{Name: "max_saves_per_user", Default: "5", Desc: "Max saves per user per game ('all' or a number)"},
+
+	// API stats configuration
+	{Name: "api_stats_bucket", Default: "1h", Desc: "API stats bucket duration (e.g., '1m', '15m', '1h', '24h')"},
 }
 
 // LoadConfig loads WAFFLE core config and app-specific config.
@@ -167,6 +173,12 @@ func LoadConfig(logger *zap.Logger) (*config.CoreConfig, AppConfig, error) {
 		// Admin seeding
 		SeedAdminEmail: appValues.String("seed_admin_email"),
 		SeedAdminName:  appValues.String("seed_admin_name"),
+
+		// Save retention
+		MaxSavesPerUser: appValues.String("max_saves_per_user"),
+
+		// API stats
+		APIStatsBucket: appValues.Duration("api_stats_bucket", 1*time.Hour),
 	}
 
 	return coreCfg, appCfg, nil
