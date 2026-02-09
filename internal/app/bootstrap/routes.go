@@ -176,10 +176,12 @@ func BuildHandler(coreCfg *config.CoreConfig, appCfg AppConfig, deps DBDeps, log
 	r.Use(sessionMgr.LoadSessionUser)
 
 	// CSRF protection middleware with path-based exemption for API routes.
+	// Cookie name is "stratasave_csrf" to avoid collisions with other services
+	// on the same domain (e.g., dev.adroit.games, log.adroit.games).
 	csrfOpts := []csrf.Option{
 		csrf.Secure(secure),
 		csrf.Path("/"),
-		csrf.CookieName("csrf_token"),
+		csrf.CookieName("stratasave_csrf"),
 		csrf.FieldName("csrf_token"),
 		csrf.SameSite(csrf.SameSiteLaxMode),
 		csrf.ErrorHandler(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
