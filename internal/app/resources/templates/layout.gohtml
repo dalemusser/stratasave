@@ -4,9 +4,9 @@
   <head>
     <meta charset="UTF-8" />
     <title>{{ if .SiteName }}{{ .SiteName }}{{ else }}StrataForge{{ end }}</title>
-    <link rel="stylesheet" href="/assets/css/tailwind.css">
-    <link rel="stylesheet" href="/assets/css/tiptap.css">
-    <script src="/assets/js/htmx.min.js"></script>
+    <link rel="stylesheet" href="/assets/css/tailwind.css?v={{ tailwindVersion }}">
+    <link rel="stylesheet" href="/assets/css/tiptap.css?v={{ tiptapVersion }}">
+    <script src="/assets/js/htmx.min.js?v={{ htmxVersion }}"></script>
     {{ if .CSRFToken }}<meta name="csrf-token" content="{{ .CSRFToken }}">{{ end }}
     <script>
       // CSRF token injection for HTMX requests

@@ -101,6 +101,12 @@ func BuildHandler(coreCfg *config.CoreConfig, appCfg AppConfig, deps DBDeps, log
 	// This ensures role changes, disabled accounts, and profile updates take effect immediately.
 	sessionMgr.SetUserFetcher(userstore.NewFetcher(deps.MongoDatabase, logger))
 
+	// Set up inline forbidden page rendering so RequireRole renders at the
+	// current URL instead of redirecting to /forbidden.
+	sessionMgr.SetForbiddenRenderer(func(w http.ResponseWriter, r *http.Request, msg string) {
+		errorsfeature.RenderForbidden(w, r, msg, "/")
+	})
+
 	// Initialize and boot the template engine once at startup.
 	// Dev mode enables template reloading for faster iteration.
 	eng := templates.New(coreCfg.Env == "dev")
@@ -175,6 +181,28 @@ func BuildHandler(coreCfg *config.CoreConfig, appCfg AppConfig, deps DBDeps, log
 	// API routes will simply have no session, which is fine.
 	r.Use(sessionMgr.LoadSessionUser)
 
+	// Stale cookie cleanup: remove old generic cookie names from before per-app naming.
+	// This runs on every request but only sets headers when old cookies are actually present.
+	// Once the browser deletes them, this becomes a no-op on subsequent requests.
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			for _, name := range []string{"csrf_token", "_gorilla_csrf"} {
+				if _, err := r.Cookie(name); err == nil {
+					http.SetCookie(w, &http.Cookie{
+						Name:     name,
+						Value:    "",
+						Path:     "/",
+						Domain:   appCfg.SessionDomain,
+						MaxAge:   -1,
+						Secure:   secure,
+						HttpOnly: true,
+					})
+				}
+			}
+			next.ServeHTTP(w, r)
+		})
+	})
+
 	// CSRF protection middleware with path-based exemption for API routes.
 	// Cookie name is "stratasave_csrf" to avoid collisions with other services
 	// on the same domain (e.g., dev.adroit.games, log.adroit.games).
@@ -195,7 +223,9 @@ func BuildHandler(coreCfg *config.CoreConfig, appCfg AppConfig, deps DBDeps, log
 				w.WriteHeader(http.StatusForbidden)
 				return
 			}
-			http.Error(w, "CSRF token invalid or missing", http.StatusForbidden)
+			errorsfeature.RenderForbidden(w, req,
+				"Your session has expired or is invalid. Please go back and try again, or log in again.",
+				"/login")
 		})),
 	}
 	// In dev mode, trust localhost origins for CSRF validation.
@@ -404,6 +434,21 @@ func BuildHandler(coreCfg *config.CoreConfig, appCfg AppConfig, deps DBDeps, log
 	errorsHandler := errorsfeature.NewHandler()
 	r.Get("/forbidden", errorsHandler.Forbidden)
 	r.Get("/unauthorized", errorsHandler.Unauthorized)
+	r.Get("/troubleshooting", errorsHandler.Troubleshooting)
+
+	// Clear session: one-click recovery from CSRF/session errors.
+	// GET (not POST) because the user may not have a valid CSRF token.
+	r.Get("/clear-session", func(w http.ResponseWriter, r *http.Request) {
+		sessionMgr.DestroySession(w, r)
+		for _, name := range []string{"stratasave_csrf", "csrf_token", "_gorilla_csrf", "theme_pref"} {
+			http.SetCookie(w, &http.Cookie{
+				Name: name, Value: "", Path: "/",
+				Domain: appCfg.SessionDomain, MaxAge: -1,
+				Secure: secure, HttpOnly: true,
+			})
+		}
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+	})
 
 	// Role-based dashboards
 	dashboardHandler := dashboardfeature.NewHandler(deps.MongoDatabase, logger)

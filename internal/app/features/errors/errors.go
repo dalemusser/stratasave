@@ -46,6 +46,13 @@ func NewHandler() *Handler {
 	return &Handler{}
 }
 
+// forbiddenVM extends BaseVM with a custom message and back link for the forbidden page.
+type forbiddenVM struct {
+	viewdata.BaseVM
+	Message string
+	BackURL string
+}
+
 // Forbidden renders the 403 forbidden page.
 func (h *Handler) Forbidden(w http.ResponseWriter, r *http.Request) {
 	vm := viewdata.New(r)
@@ -53,6 +60,31 @@ func (h *Handler) Forbidden(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusForbidden)
 	templates.Render(w, r, "errors/forbidden", vm)
+}
+
+// RenderForbidden renders a 403 page with a custom message and back link.
+// Use this for contextual error pages (e.g., CSRF failures) where
+// the default "Access Denied" message is not informative enough.
+func RenderForbidden(w http.ResponseWriter, r *http.Request, msg, backURL string) {
+	vm := viewdata.New(r)
+	vm.Title = "Access Denied"
+
+	data := forbiddenVM{
+		BaseVM:  vm,
+		Message: msg,
+		BackURL: backURL,
+	}
+
+	w.WriteHeader(http.StatusForbidden)
+	templates.Render(w, r, "errors/forbidden", data)
+}
+
+// Troubleshooting renders the "Having Trouble?" self-service troubleshooting page.
+// GET /troubleshooting
+func (h *Handler) Troubleshooting(w http.ResponseWriter, r *http.Request) {
+	vm := viewdata.New(r)
+	vm.Title = "Having Trouble?"
+	templates.Render(w, r, "errors/troubleshooting", vm)
 }
 
 // Unauthorized renders the 401 unauthorized page.

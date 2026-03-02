@@ -1,0 +1,62 @@
+{{ define "errors/troubleshooting" }}
+  {{ template "layout" . }}
+{{ end }}
+{{ define "content" }}
+<div class="max-w-2xl">
+  <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">Having Trouble?</h1>
+
+  <div class="space-y-4">
+    <!-- Session & Cookie Errors -->
+    <div class="bg-white dark:bg-gray-800 rounded shadow p-4">
+      <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">Session &amp; Cookie Errors</h2>
+      <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">
+        If you are seeing CSRF token errors, "session expired" messages, or getting stuck in a login loop,
+        clearing your session can fix the problem.
+      </p>
+      <a href="/clear-session" class="inline-block bg-indigo-600 text-white text-sm px-3 py-1.5 rounded hover:bg-indigo-700">
+        Clear Session
+      </a>
+      <p class="text-xs text-gray-500 dark:text-gray-500 mt-2">
+        This clears your login cookies and redirects you to the login page. It does not delete any other data.
+      </p>
+    </div>
+
+    <!-- Browser Requirements -->
+    <div class="bg-white dark:bg-gray-800 rounded shadow p-4">
+      <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">Browser Requirements</h2>
+      <ul class="text-sm text-gray-600 dark:text-gray-400 list-disc list-inside space-y-1">
+        <li>Cookies must be enabled</li>
+        <li>JavaScript must be enabled</li>
+        <li>Try disabling browser extensions that may block cookies or scripts</li>
+      </ul>
+    </div>
+
+    <!-- Password Login -->
+    <div class="bg-white dark:bg-gray-800 rounded shadow p-4">
+      <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">Password Login</h2>
+      <ul class="text-sm text-gray-600 dark:text-gray-400 list-disc list-inside space-y-1">
+        <li>Check that Caps Lock is off</li>
+        <li>Passwords are case-sensitive</li>
+        <li>Make sure you are using the correct Login ID</li>
+      </ul>
+    </div>
+
+    <!-- Email Verification Login -->
+    <div class="bg-white dark:bg-gray-800 rounded shadow p-4">
+      <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">Email Verification Login</h2>
+      <ul class="text-sm text-gray-600 dark:text-gray-400 list-disc list-inside space-y-1">
+        <li>Check your spam or junk folder for the verification email</li>
+        <li>Verification links expire &mdash; request a new one if yours has expired</li>
+      </ul>
+    </div>
+
+    <!-- Account & Access -->
+    <div class="bg-white dark:bg-gray-800 rounded shadow p-4">
+      <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">Account &amp; Access</h2>
+      <p class="text-sm text-gray-600 dark:text-gray-400">
+        For account or access issues, contact your admin.
+      </p>
+    </div>
+  </div>
+</div>
+{{ end }}

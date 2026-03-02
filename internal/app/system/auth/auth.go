@@ -48,14 +48,18 @@ const (
 | SessionManager - injectable session management                              |
 *─────────────────────────────────────────────────────────────────────────────*/
 
+// ForbiddenRenderer renders a 403 page inline (no redirect).
+type ForbiddenRenderer func(w http.ResponseWriter, r *http.Request, msg string)
+
 // SessionManager encapsulates session store and configuration.
 // It provides middleware and utilities for session-based authentication.
 // Use NewSessionManager to create an instance.
 type SessionManager struct {
-	store       *sessions.CookieStore
-	logger      *zap.Logger
-	name        string
-	userFetcher UserFetcher
+	store             *sessions.CookieStore
+	logger            *zap.Logger
+	name              string
+	userFetcher       UserFetcher
+	forbiddenRenderer ForbiddenRenderer
 }
 
 // NewSessionManager creates a new SessionManager with the provided configuration.
@@ -154,6 +158,12 @@ func (sm *SessionManager) GetSession(r *http.Request) (*sessions.Session, error)
 // user data on each request. This must be called after database initialization.
 func (sm *SessionManager) SetUserFetcher(uf UserFetcher) {
 	sm.userFetcher = uf
+}
+
+// SetForbiddenRenderer sets the callback used by RequireRole to render a 403 page
+// inline instead of redirecting to /forbidden.
+func (sm *SessionManager) SetForbiddenRenderer(fn ForbiddenRenderer) {
+	sm.forbiddenRenderer = fn
 }
 
 /*─────────────────────────────────────────────────────────────────────────────*
@@ -348,13 +358,15 @@ func (sm *SessionManager) RequireRole(allowed ...string) func(http.Handler) http
 			userRole := normalize.Role(u.Role)
 			if _, has := set[userRole]; !has {
 				if r.Header.Get("HX-Request") == "true" {
-					w.Header().Set("HX-Redirect", "/forbidden")
+					// HTMX partial request — force full page reload so the
+					// forbidden page renders with layout at the current URL.
+					w.Header().Set("HX-Refresh", "true")
 					w.WriteHeader(http.StatusForbidden)
 					return
 				}
 
-				if wantsHTML(r) {
-					http.Redirect(w, r, "/forbidden", http.StatusSeeOther)
+				if wantsHTML(r) && sm.forbiddenRenderer != nil {
+					sm.forbiddenRenderer(w, r, "You don't have permission to access this page.")
 					return
 				}
 
