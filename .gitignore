@@ -30,6 +30,9 @@ go.work.sum
 # Uploaded files
 uploads/
 
+# OS files
+.DS_Store
+
 # Editor/IDE
 # .idea/
 # .vscode/
