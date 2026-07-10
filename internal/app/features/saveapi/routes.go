@@ -40,6 +40,12 @@ func Routes(h *Handler, recorder *apistats.Recorder, apiKey string, logger *zap.
 		sr.Post("/", h.LoadHandler)
 	})
 
+	// Delete endpoint with stats tracking
+	r.Route("/delete", func(sr chi.Router) {
+		sr.Use(apistats.MiddlewareWithRecorder(recorder, apistatsstore.StatTypeDeleteState))
+		sr.Post("/", h.DeleteHandler)
+	})
+
 	return r
 }
 

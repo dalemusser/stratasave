@@ -269,8 +269,10 @@ if (tzSelect) {
 // Chart data from server
 const stateSaveData = {{ toJSON .StateSaveData }};
 const stateLoadData = {{ toJSON .StateLoadData }};
+const stateDeleteData = {{ toJSON .StateDeleteData }};
 const settingsSaveData = {{ toJSON .SettingsSaveData }};
 const settingsLoadData = {{ toJSON .SettingsLoadData }};
+const settingsDeleteData = {{ toJSON .SettingsDeleteData }};
 const timeRange = '{{ .TimeRange }}';
 
 // Helper to format timestamps using selected timezone
@@ -370,6 +372,15 @@ function buildRequestsDatasets() {
       tension: 0.1
     });
   }
+  if (stateDeleteData && stateDeleteData.length > 0) {
+    datasets.push({
+      label: 'Delete State',
+      data: getDataValues(stateDeleteData, sortedTimestamps, 'Requests'),
+      borderColor: 'rgb(239, 68, 68)',
+      backgroundColor: 'rgba(239, 68, 68, 0.1)',
+      tension: 0.1
+    });
+  }
   if (settingsSaveData && settingsSaveData.length > 0) {
     datasets.push({
       label: 'Save Settings',
@@ -385,6 +396,15 @@ function buildRequestsDatasets() {
       data: getDataValues(settingsLoadData, sortedTimestamps, 'Requests'),
       borderColor: 'rgb(236, 72, 153)',
       backgroundColor: 'rgba(236, 72, 153, 0.1)',
+      tension: 0.1
+    });
+  }
+  if (settingsDeleteData && settingsDeleteData.length > 0) {
+    datasets.push({
+      label: 'Delete Settings',
+      data: getDataValues(settingsDeleteData, sortedTimestamps, 'Requests'),
+      borderColor: 'rgb(168, 85, 247)',
+      backgroundColor: 'rgba(168, 85, 247, 0.1)',
       tension: 0.1
     });
   }
@@ -411,6 +431,15 @@ function buildResponseTimeDatasets() {
       tension: 0.1
     });
   }
+  if (stateDeleteData && stateDeleteData.length > 0) {
+    datasets.push({
+      label: 'Delete State',
+      data: getDataValues(stateDeleteData, sortedTimestamps, 'AvgMs'),
+      borderColor: 'rgb(239, 68, 68)',
+      backgroundColor: 'rgba(239, 68, 68, 0.1)',
+      tension: 0.1
+    });
+  }
   if (settingsSaveData && settingsSaveData.length > 0) {
     datasets.push({
       label: 'Save Settings',
@@ -426,6 +455,15 @@ function buildResponseTimeDatasets() {
       data: getDataValues(settingsLoadData, sortedTimestamps, 'AvgMs'),
       borderColor: 'rgb(236, 72, 153)',
       backgroundColor: 'rgba(236, 72, 153, 0.1)',
+      tension: 0.1
+    });
+  }
+  if (settingsDeleteData && settingsDeleteData.length > 0) {
+    datasets.push({
+      label: 'Delete Settings',
+      data: getDataValues(settingsDeleteData, sortedTimestamps, 'AvgMs'),
+      borderColor: 'rgb(168, 85, 247)',
+      backgroundColor: 'rgba(168, 85, 247, 0.1)',
       tension: 0.1
     });
   }

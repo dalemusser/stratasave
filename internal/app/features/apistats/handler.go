@@ -92,8 +92,8 @@ func (h *Handler) ServeList(w http.ResponseWriter, r *http.Request) {
 	var summaryVMs []SummaryVM
 	for _, s := range summaries {
 		// Filter based on API type
-		isStateType := s.StatType == apistatsstore.StatTypeSaveState || s.StatType == apistatsstore.StatTypeLoadState
-		isSettingsType := s.StatType == apistatsstore.StatTypeSaveSettings || s.StatType == apistatsstore.StatTypeLoadSettings
+		isStateType := s.StatType == apistatsstore.StatTypeSaveState || s.StatType == apistatsstore.StatTypeLoadState || s.StatType == apistatsstore.StatTypeDeleteState
+		isSettingsType := s.StatType == apistatsstore.StatTypeSaveSettings || s.StatType == apistatsstore.StatTypeLoadSettings || s.StatType == apistatsstore.StatTypeDeleteSettings
 
 		if apiFilter == "state" && !isStateType {
 			continue
@@ -119,15 +119,17 @@ func (h *Handler) ServeList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get time series data for each stat type (only for relevant APIs based on filter)
-	var stateSaveData, stateLoadData, settingsSaveData, settingsLoadData []DataPointVM
+	var stateSaveData, stateLoadData, stateDeleteData, settingsSaveData, settingsLoadData, settingsDeleteData []DataPointVM
 
 	if apiFilter == "" || apiFilter == "state" {
 		stateSaveData = h.getTimeSeriesData(ctx, apistatsstore.StatTypeSaveState, startTime, endTime, bucketFilter)
 		stateLoadData = h.getTimeSeriesData(ctx, apistatsstore.StatTypeLoadState, startTime, endTime, bucketFilter)
+		stateDeleteData = h.getTimeSeriesData(ctx, apistatsstore.StatTypeDeleteState, startTime, endTime, bucketFilter)
 	}
 	if apiFilter == "" || apiFilter == "settings" {
 		settingsSaveData = h.getTimeSeriesData(ctx, apistatsstore.StatTypeSaveSettings, startTime, endTime, bucketFilter)
 		settingsLoadData = h.getTimeSeriesData(ctx, apistatsstore.StatTypeLoadSettings, startTime, endTime, bucketFilter)
+		settingsDeleteData = h.getTimeSeriesData(ctx, apistatsstore.StatTypeDeleteSettings, startTime, endTime, bucketFilter)
 	}
 
 	// Build available buckets list
@@ -146,21 +148,23 @@ func (h *Handler) ServeList(w http.ResponseWriter, r *http.Request) {
 	tzGroups, _ := timezones.Groups()
 
 	data := ListVM{
-		BaseVM:           viewdata.NewBaseVM(r, h.db, "API Statistics", "/dashboard"),
-		TimezoneGroups:   tzGroups,
-		CurrentBucket:    currentBucket,
-		AvailableBuckets: availableBuckets,
-		StartTime:        startTime,
-		EndTime:          endTime,
-		TimeRange:        timeRange,
-		APIFilter:        apiFilter,
-		Summaries:        summaryVMs,
-		StateSaveData:    stateSaveData,
-		StateLoadData:    stateLoadData,
-		SettingsSaveData: settingsSaveData,
-		SettingsLoadData: settingsLoadData,
-		DataResolutions:  dataResolutions,
-		IsAdmin:          isAdmin,
+		BaseVM:             viewdata.NewBaseVM(r, h.db, "API Statistics", "/dashboard"),
+		TimezoneGroups:     tzGroups,
+		CurrentBucket:      currentBucket,
+		AvailableBuckets:   availableBuckets,
+		StartTime:          startTime,
+		EndTime:            endTime,
+		TimeRange:          timeRange,
+		APIFilter:          apiFilter,
+		Summaries:          summaryVMs,
+		StateSaveData:      stateSaveData,
+		StateLoadData:      stateLoadData,
+		StateDeleteData:    stateDeleteData,
+		SettingsSaveData:   settingsSaveData,
+		SettingsLoadData:   settingsLoadData,
+		SettingsDeleteData: settingsDeleteData,
+		DataResolutions:    dataResolutions,
+		IsAdmin:            isAdmin,
 	}
 
 	templates.Render(w, r, "apistats/list", data)
@@ -311,8 +315,10 @@ func (h *Handler) HandleRollUp(w http.ResponseWriter, r *http.Request) {
 	statTypes := []apistatsstore.StatType{
 		apistatsstore.StatTypeSaveState,
 		apistatsstore.StatTypeLoadState,
+		apistatsstore.StatTypeDeleteState,
 		apistatsstore.StatTypeSaveSettings,
 		apistatsstore.StatTypeLoadSettings,
+		apistatsstore.StatTypeDeleteSettings,
 	}
 
 	for _, st := range statTypes {

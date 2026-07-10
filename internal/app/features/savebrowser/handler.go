@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	defaultPlayerLimit = 20
+	defaultUserLimit = 20
 )
 
 // Handler handles save browser HTTP requests.
@@ -47,7 +47,7 @@ func NewHandler(db *mongo.Database, errLog *errorsfeature.ErrorLogger, defaultLi
 	}
 }
 
-// ServeList renders the main browser page with game header, players table, and saves.
+// ServeList renders the main browser page with game header, users table, and saves.
 func (h *Handler) ServeList(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), timeouts.Medium())
 	defer cancel()
@@ -63,7 +63,7 @@ func (h *Handler) ServeList(w http.ResponseWriter, r *http.Request) {
 	// Parse query params
 	selectedGame := r.URL.Query().Get("game")
 	selectedUser := r.URL.Query().Get("user")
-	playerSearch := r.URL.Query().Get("search")
+	userSearch := r.URL.Query().Get("search")
 	limitStr := r.URL.Query().Get("limit")
 	afterID := r.URL.Query().Get("after")
 	beforeID := r.URL.Query().Get("before")
@@ -97,42 +97,42 @@ func (h *Handler) ServeList(w http.ResponseWriter, r *http.Request) {
 		Games:          games,
 		SelectedGame:   selectedGame,
 		SelectedUser:   selectedUser,
-		PlayerSearch:   playerSearch,
-		PlayerPage:     page,
+		UserSearch:   userSearch,
+		UserPage:     page,
 		SaveLimit:      limit,
 		DefaultLimit:   h.defaultLimit,
 	}
 
 	// If game selected, load players with counts
 	if selectedGame != "" {
-		users, total, err := h.store.ListUsersWithCounts(ctx, selectedGame, playerSearch, page, defaultPlayerLimit)
+		users, total, err := h.store.ListUsersWithCounts(ctx, selectedGame, userSearch, page, defaultUserLimit)
 		if err != nil {
 			h.logger.Warn("failed to list users with counts", zap.Error(err))
 		} else {
-			data.Players = make([]PlayerRowVM, len(users))
+			data.Users = make([]UserRowVM, len(users))
 			for i, u := range users {
-				data.Players[i] = PlayerRowVM{
+				data.Users[i] = UserRowVM{
 					UserID:    u.UserID,
 					SaveCount: u.SaveCount,
 				}
 			}
-			data.PlayerTotal = total
+			data.UserTotal = total
 
 			// Calculate pagination
-			data.PlayerRangeStart = (page-1)*defaultPlayerLimit + 1
-			data.PlayerRangeEnd = data.PlayerRangeStart + len(users) - 1
-			if data.PlayerRangeEnd > int(total) {
-				data.PlayerRangeEnd = int(total)
+			data.UserRangeStart = (page-1)*defaultUserLimit + 1
+			data.UserRangeEnd = data.UserRangeStart + len(users) - 1
+			if data.UserRangeEnd > int(total) {
+				data.UserRangeEnd = int(total)
 			}
 			if total == 0 {
-				data.PlayerRangeStart = 0
-				data.PlayerRangeEnd = 0
+				data.UserRangeStart = 0
+				data.UserRangeEnd = 0
 			}
 
-			data.PlayerHasPrev = page > 1
-			data.PlayerHasNext = int64(page*defaultPlayerLimit) < total
-			data.PlayerPrevPage = page - 1
-			data.PlayerNextPage = page + 1
+			data.UserHasPrev = page > 1
+			data.UserHasNext = int64(page*defaultUserLimit) < total
+			data.UserPrevPage = page - 1
+			data.UserNextPage = page + 1
 		}
 
 		// If user selected, load saves
@@ -174,20 +174,20 @@ func (h *Handler) ServeList(w http.ResponseWriter, r *http.Request) {
 	if r.Header.Get("HX-Request") == "true" {
 		target := r.Header.Get("HX-Target")
 		switch target {
-		case "players-section":
-			templates.RenderSnippet(w, "savebrowser/players_partial", PlayersPartialVM{
+		case "users-section":
+			templates.RenderSnippet(w, "savebrowser/users_partial", UsersPartialVM{
 				SelectedGame:     selectedGame,
 				SelectedUser:     selectedUser,
-				PlayerSearch:     playerSearch,
-				Players:          data.Players,
-				PlayerTotal:      data.PlayerTotal,
-				PlayerPage:       page,
-				PlayerHasPrev:    data.PlayerHasPrev,
-				PlayerHasNext:    data.PlayerHasNext,
-				PlayerRangeStart: data.PlayerRangeStart,
-				PlayerRangeEnd:   data.PlayerRangeEnd,
-				PlayerPrevPage:   data.PlayerPrevPage,
-				PlayerNextPage:   data.PlayerNextPage,
+				UserSearch:     userSearch,
+				Users:          data.Users,
+				UserTotal:      data.UserTotal,
+				UserPage:       page,
+				UserHasPrev:    data.UserHasPrev,
+				UserHasNext:    data.UserHasNext,
+				UserRangeStart: data.UserRangeStart,
+				UserRangeEnd:   data.UserRangeEnd,
+				UserPrevPage:   data.UserPrevPage,
+				UserNextPage:   data.UserNextPage,
 				Limit:            limit,
 			})
 			return
@@ -211,8 +211,8 @@ func (h *Handler) ServeList(w http.ResponseWriter, r *http.Request) {
 	templates.Render(w, r, "savebrowser/list", data)
 }
 
-// ServePlayers handles GET /saves/players - HTMX partial for players table.
-func (h *Handler) ServePlayers(w http.ResponseWriter, r *http.Request) {
+// ServeUsers handles GET /saves/users - HTMX partial for users table.
+func (h *Handler) ServeUsers(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), timeouts.Medium())
 	defer cancel()
 
@@ -236,52 +236,52 @@ func (h *Handler) ServePlayers(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	data := PlayersPartialVM{
+	data := UsersPartialVM{
 		SelectedGame: game,
 		SelectedUser: selectedUser,
-		PlayerSearch: search,
-		PlayerPage:   page,
+		UserSearch: search,
+		UserPage:   page,
 		Limit:        limit,
 	}
 
 	if game == "" {
-		templates.RenderSnippet(w, "savebrowser/players_partial", data)
+		templates.RenderSnippet(w, "savebrowser/users_partial", data)
 		return
 	}
 
-	users, total, err := h.store.ListUsersWithCounts(ctx, game, search, page, defaultPlayerLimit)
+	users, total, err := h.store.ListUsersWithCounts(ctx, game, search, page, defaultUserLimit)
 	if err != nil {
 		h.logger.Warn("failed to list users with counts", zap.Error(err))
-		templates.RenderSnippet(w, "savebrowser/players_partial", data)
+		templates.RenderSnippet(w, "savebrowser/users_partial", data)
 		return
 	}
 
-	data.Players = make([]PlayerRowVM, len(users))
+	data.Users = make([]UserRowVM, len(users))
 	for i, u := range users {
-		data.Players[i] = PlayerRowVM{
+		data.Users[i] = UserRowVM{
 			UserID:    u.UserID,
 			SaveCount: u.SaveCount,
 		}
 	}
-	data.PlayerTotal = total
+	data.UserTotal = total
 
 	// Calculate pagination
-	data.PlayerRangeStart = (page-1)*defaultPlayerLimit + 1
-	data.PlayerRangeEnd = data.PlayerRangeStart + len(users) - 1
-	if data.PlayerRangeEnd > int(total) {
-		data.PlayerRangeEnd = int(total)
+	data.UserRangeStart = (page-1)*defaultUserLimit + 1
+	data.UserRangeEnd = data.UserRangeStart + len(users) - 1
+	if data.UserRangeEnd > int(total) {
+		data.UserRangeEnd = int(total)
 	}
 	if total == 0 {
-		data.PlayerRangeStart = 0
-		data.PlayerRangeEnd = 0
+		data.UserRangeStart = 0
+		data.UserRangeEnd = 0
 	}
 
-	data.PlayerHasPrev = page > 1
-	data.PlayerHasNext = int64(page*defaultPlayerLimit) < total
-	data.PlayerPrevPage = page - 1
-	data.PlayerNextPage = page + 1
+	data.UserHasPrev = page > 1
+	data.UserHasNext = int64(page*defaultUserLimit) < total
+	data.UserPrevPage = page - 1
+	data.UserNextPage = page + 1
 
-	templates.RenderSnippet(w, "savebrowser/players_partial", data)
+	templates.RenderSnippet(w, "savebrowser/users_partial", data)
 }
 
 // ServeGamePicker handles GET /saves/game-picker - game selector modal.

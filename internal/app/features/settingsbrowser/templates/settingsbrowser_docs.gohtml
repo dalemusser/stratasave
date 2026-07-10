@@ -53,6 +53,11 @@
                 <td class="px-4 py-3"><code class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">/api/settings/load</code></td>
                 <td class="px-4 py-3"><span class="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded text-xs">POST</span></td>
               </tr>
+              <tr>
+                <td class="px-4 py-3 text-gray-900 dark:text-gray-100">Delete Settings</td>
+                <td class="px-4 py-3"><code class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">/api/settings/delete</code></td>
+                <td class="px-4 py-3"><span class="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded text-xs">POST</span></td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -92,7 +97,7 @@
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{
-    "user_id": "player123",
+    "user_id": "69b4449ec6006ac370dad9df",
     "game": "my-awesome-game",
     "settings_data": {
       "audio_volume": 0.8,
@@ -132,7 +137,46 @@
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{
-    "user_id": "player123",
+    "user_id": "69b4449ec6006ac370dad9df",
+    "game": "my-awesome-game"
+  }'</code></pre>
+      </section>
+
+      <!-- Delete Settings -->
+      <section>
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">Delete Settings</h2>
+
+        <p class="text-gray-700 dark:text-gray-300 mb-3">
+          Deletes the saved settings for a user in a game. Settings are stored one document per user per
+          game, so at most one document is removed. Deleting when no settings exist is not an error &mdash;
+          <code>deleted</code> is simply <code>0</code>.
+        </p>
+
+        <div class="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3">
+          <p class="text-sm text-red-700 dark:text-red-300">
+            <strong>Destructive:</strong> This permanently removes saved settings and cannot be undone.
+          </p>
+        </div>
+
+        <h3 class="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2">Request Body</h3>
+        <pre class="bg-gray-900 text-gray-100 p-4 rounded overflow-x-auto text-sm mb-4"><code>{
+  "user_id": "string",         // Required: Unique user identifier
+  "game": "string"             // Required: Game identifier
+}</code></pre>
+
+        <h3 class="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2">Response</h3>
+        <pre class="bg-gray-900 text-gray-100 p-4 rounded overflow-x-auto text-sm mb-4"><code>{
+  "user_id": "string",
+  "game": "string",
+  "deleted": 1                 // 1 if settings were removed, 0 if none existed
+}</code></pre>
+
+        <h3 class="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2">curl Example</h3>
+        <pre class="bg-gray-900 text-gray-100 p-4 rounded overflow-x-auto text-sm"><code>curl -X POST {{ .BaseURL }}/api/settings/delete \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    "user_id": "69b4449ec6006ac370dad9df",
     "game": "my-awesome-game"
   }'</code></pre>
       </section>

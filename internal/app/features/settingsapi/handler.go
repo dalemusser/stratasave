@@ -12,6 +12,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"regexp"
 	"sync"
 	"time"
 
@@ -25,6 +26,10 @@ import (
 
 // CollectionName is the MongoDB collection for player settings.
 const CollectionName = "player_settings"
+
+// userIDRegex matches a 24-character lowercase hex string (Mongo ObjectID hex).
+// All user_id values must match this — no other identity forms are accepted.
+var userIDRegex = regexp.MustCompile(`^[0-9a-f]{24}$`)
 
 // PlayerSettings represents a player's saved settings in the database.
 type PlayerSettings struct {
@@ -57,7 +62,7 @@ func NewHandler(db *mongo.Database, logger *zap.Logger) *Handler {
 // Request body:
 //
 //	{
-//	    "user_id": "player123",
+//	    "user_id": "69b4449ec6006ac370dad9df",
 //	    "game": "mygame",
 //	    "settings_data": { "audio": 0.8, "graphics": "high", ... }
 //	}
@@ -66,7 +71,7 @@ func NewHandler(db *mongo.Database, logger *zap.Logger) *Handler {
 //
 //	{
 //	    "id": "...",
-//	    "user_id": "player123",
+//	    "user_id": "69b4449ec6006ac370dad9df",
 //	    "game": "mygame",
 //	    "timestamp": "2026-01-26T...",
 //	    "settings_data": { ... }
@@ -83,6 +88,10 @@ func (h *Handler) SaveHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if in.UserID == "" || in.Game == "" || in.SettingsData == nil {
 		writeJSONError(w, r, "Missing required fields", http.StatusBadRequest)
+		return
+	}
+	if !userIDRegex.MatchString(in.UserID) {
+		writeJSONError(w, r, "'user_id' must be a 24-character lowercase hex string", http.StatusBadRequest)
 		return
 	}
 
@@ -142,7 +151,7 @@ func (h *Handler) SaveHandler(w http.ResponseWriter, r *http.Request) {
 // Request body:
 //
 //	{
-//	    "user_id": "player123",
+//	    "user_id": "69b4449ec6006ac370dad9df",
 //	    "game": "mygame"
 //	}
 //
@@ -150,7 +159,7 @@ func (h *Handler) SaveHandler(w http.ResponseWriter, r *http.Request) {
 //
 //	{
 //	    "id": "...",
-//	    "user_id": "player123",
+//	    "user_id": "69b4449ec6006ac370dad9df",
 //	    "game": "mygame",
 //	    "timestamp": "2026-01-26T...",
 //	    "settings_data": { ... }
@@ -166,6 +175,10 @@ func (h *Handler) LoadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if in.UserID == "" || in.Game == "" {
 		writeJSONError(w, r, "Missing required fields", http.StatusBadRequest)
+		return
+	}
+	if !userIDRegex.MatchString(in.UserID) {
+		writeJSONError(w, r, "'user_id' must be a 24-character lowercase hex string", http.StatusBadRequest)
 		return
 	}
 
@@ -202,6 +215,76 @@ func (h *Handler) LoadHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(settings); err != nil {
 		h.logger.Error("failed to encode settings response", zap.Error(err))
+	}
+}
+
+// DeleteHandler handles POST /settings/delete requests.
+// It deletes the saved settings for a user/game from the player_settings
+// collection. Settings are stored one document per user per game, so at most
+// one document is removed.
+//
+// Request body:
+//
+//	{
+//	    "user_id": "69b4449ec6006ac370dad9df",
+//	    "game": "mygame"
+//	}
+//
+// user_id must be a 24-character lowercase hex string.
+//
+// Response (200 OK):
+//
+//	{
+//	    "user_id": "69b4449ec6006ac370dad9df",
+//	    "game": "mygame",
+//	    "deleted": 1
+//	}
+//
+// Deleting when no settings exist is not an error; "deleted" will be 0.
+func (h *Handler) DeleteHandler(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		UserID string `json:"user_id"`
+		Game   string `json:"game"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeJSONError(w, r, "Invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+	if in.UserID == "" || in.Game == "" {
+		writeJSONError(w, r, "Missing required fields", http.StatusBadRequest)
+		return
+	}
+	if !userIDRegex.MatchString(in.UserID) {
+		writeJSONError(w, r, "'user_id' must be a 24-character lowercase hex string", http.StatusBadRequest)
+		return
+	}
+
+	coll := h.db.Collection(CollectionName)
+	filter := bson.M{"user_id": in.UserID, "game": in.Game}
+	res, err := coll.DeleteOne(r.Context(), filter)
+	if err != nil {
+		h.logger.Error("failed to delete player settings",
+			zap.String("game", in.Game),
+			zap.String("user_id", in.UserID),
+			zap.Error(err),
+		)
+		writeJSONError(w, r, "Failed to delete settings: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	h.logger.Info("player settings deleted",
+		zap.String("game", in.Game),
+		zap.String("user_id", in.UserID),
+		zap.Int64("deleted", res.DeletedCount),
+	)
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(map[string]any{
+		"user_id": in.UserID,
+		"game":    in.Game,
+		"deleted": res.DeletedCount,
+	}); err != nil {
+		h.logger.Error("failed to encode delete response", zap.Error(err))
 	}
 }
 

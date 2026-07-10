@@ -56,6 +56,12 @@
                 <td class="px-4 py-3"><code class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">/load</code></td>
                 <td class="px-4 py-3"><span class="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded text-xs">POST</span></td>
               </tr>
+              <tr>
+                <td class="px-4 py-3 text-gray-900 dark:text-gray-100">Delete State</td>
+                <td class="px-4 py-3"><code class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">/api/state/delete</code></td>
+                <td class="px-4 py-3 text-gray-400 dark:text-gray-500">&mdash;</td>
+                <td class="px-4 py-3"><span class="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded text-xs">POST</span></td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -102,7 +108,7 @@
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{
-    "user_id": "player123",
+    "user_id": "69b4449ec6006ac370dad9df",
     "game": "my-awesome-game",
     "save_data": {
       "level": 5,
@@ -143,7 +149,7 @@ curl -X POST {{ .BaseURL }}/api/state/load \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{
-    "user_id": "player123",
+    "user_id": "69b4449ec6006ac370dad9df",
     "game": "my-awesome-game"
   }'
 
@@ -152,9 +158,48 @@ curl -X POST {{ .BaseURL }}/api/state/load \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{
-    "user_id": "player123",
+    "user_id": "69b4449ec6006ac370dad9df",
     "game": "my-awesome-game",
     "limit": 5
+  }'</code></pre>
+      </section>
+
+      <!-- Delete State -->
+      <section>
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">Delete State</h2>
+
+        <p class="text-gray-700 dark:text-gray-300 mb-3">
+          Deletes <strong>all</strong> saved state for a user in a game. Because state is stored as an
+          append-only history, every saved state for the given <code>user_id</code> and <code>game</code>
+          is removed. Deleting when no state exists is not an error &mdash; <code>deleted</code> is simply <code>0</code>.
+        </p>
+
+        <div class="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3">
+          <p class="text-sm text-red-700 dark:text-red-300">
+            <strong>Destructive:</strong> This permanently removes saved state and cannot be undone.
+          </p>
+        </div>
+
+        <h3 class="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2">Request Body</h3>
+        <pre class="bg-gray-900 text-gray-100 p-4 rounded overflow-x-auto text-sm mb-4"><code>{
+  "user_id": "string",      // Required: Unique user identifier
+  "game": "string"          // Required: Game identifier
+}</code></pre>
+
+        <h3 class="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2">Response</h3>
+        <pre class="bg-gray-900 text-gray-100 p-4 rounded overflow-x-auto text-sm mb-4"><code>{
+  "user_id": "string",
+  "game": "string",
+  "deleted": 3              // Number of saved states removed
+}</code></pre>
+
+        <h3 class="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2">curl Example</h3>
+        <pre class="bg-gray-900 text-gray-100 p-4 rounded overflow-x-auto text-sm"><code>curl -X POST {{ .BaseURL }}/api/state/delete \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    "user_id": "69b4449ec6006ac370dad9df",
+    "game": "my-awesome-game"
   }'</code></pre>
       </section>
 

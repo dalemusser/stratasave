@@ -8,13 +8,9 @@ import (
 	"time"
 
 	activityfeature "github.com/dalemusser/stratasave/internal/app/features/activity"
-	apistatsfeature "github.com/dalemusser/stratasave/internal/app/features/apistats"
 	announcementsfeature "github.com/dalemusser/stratasave/internal/app/features/announcements"
 	apikeysfeature "github.com/dalemusser/stratasave/internal/app/features/apikeys"
-	saveapifeature "github.com/dalemusser/stratasave/internal/app/features/saveapi"
-	savebrowserfeature "github.com/dalemusser/stratasave/internal/app/features/savebrowser"
-	settingsapifeature "github.com/dalemusser/stratasave/internal/app/features/settingsapi"
-	settingsbrowserfeature "github.com/dalemusser/stratasave/internal/app/features/settingsbrowser"
+	apistatsfeature "github.com/dalemusser/stratasave/internal/app/features/apistats"
 	auditlogfeature "github.com/dalemusser/stratasave/internal/app/features/auditlog"
 	authgooglefeature "github.com/dalemusser/stratasave/internal/app/features/authgoogle"
 	dashboardfeature "github.com/dalemusser/stratasave/internal/app/features/dashboard"
@@ -30,24 +26,28 @@ import (
 	logoutfeature "github.com/dalemusser/stratasave/internal/app/features/logout"
 	pagesfeature "github.com/dalemusser/stratasave/internal/app/features/pages"
 	profilefeature "github.com/dalemusser/stratasave/internal/app/features/profile"
+	saveapifeature "github.com/dalemusser/stratasave/internal/app/features/saveapi"
+	savebrowserfeature "github.com/dalemusser/stratasave/internal/app/features/savebrowser"
 	settingsfeature "github.com/dalemusser/stratasave/internal/app/features/settings"
+	settingsapifeature "github.com/dalemusser/stratasave/internal/app/features/settingsapi"
+	settingsbrowserfeature "github.com/dalemusser/stratasave/internal/app/features/settingsbrowser"
 	statsfeature "github.com/dalemusser/stratasave/internal/app/features/stats"
 	statusfeature "github.com/dalemusser/stratasave/internal/app/features/status"
 	systemusersfeature "github.com/dalemusser/stratasave/internal/app/features/systemusers"
 	appresources "github.com/dalemusser/stratasave/internal/app/resources"
 	"github.com/dalemusser/stratasave/internal/app/store/activity"
-	apistatsstore "github.com/dalemusser/stratasave/internal/app/store/apistats"
-	ledgerstore "github.com/dalemusser/stratasave/internal/app/store/ledger"
-	"github.com/dalemusser/stratasave/internal/app/system/apistats"
-	"github.com/dalemusser/stratasave/internal/app/system/ledger"
 	announcementstore "github.com/dalemusser/stratasave/internal/app/store/announcement"
+	apistatsstore "github.com/dalemusser/stratasave/internal/app/store/apistats"
 	"github.com/dalemusser/stratasave/internal/app/store/audit"
+	ledgerstore "github.com/dalemusser/stratasave/internal/app/store/ledger"
 	"github.com/dalemusser/stratasave/internal/app/store/oauthstate"
 	"github.com/dalemusser/stratasave/internal/app/store/ratelimit"
 	"github.com/dalemusser/stratasave/internal/app/store/sessions"
 	userstore "github.com/dalemusser/stratasave/internal/app/store/users"
-	"github.com/dalemusser/stratasave/internal/app/system/auth"
+	"github.com/dalemusser/stratasave/internal/app/system/apistats"
 	"github.com/dalemusser/stratasave/internal/app/system/auditlog"
+	"github.com/dalemusser/stratasave/internal/app/system/auth"
+	"github.com/dalemusser/stratasave/internal/app/system/ledger"
 	"github.com/dalemusser/stratasave/internal/app/system/viewdata"
 	"github.com/dalemusser/waffle/config"
 	"github.com/dalemusser/waffle/middleware"
@@ -253,7 +253,7 @@ func BuildHandler(coreCfg *config.CoreConfig, appCfg AppConfig, deps DBDeps, log
 			// - Heartbeat API (internal JS calls with session auth)
 			// - Invitation acceptance (the invitation token itself provides CSRF protection)
 			switch path {
-			case "/save", "/load", "/api/state/save", "/api/state/load", "/api/settings/save", "/api/settings/load", "/api/heartbeat", "/invite":
+			case "/save", "/load", "/api/state/save", "/api/state/load", "/api/state/delete", "/api/settings/save", "/api/settings/load", "/api/settings/delete", "/api/heartbeat", "/invite":
 				next.ServeHTTP(w, req)
 				return
 			}
@@ -489,14 +489,14 @@ func BuildHandler(coreCfg *config.CoreConfig, appCfg AppConfig, deps DBDeps, log
 
 	// System status page (admin only)
 	statusAppCfg := statusfeature.AppConfig{
-		MongoURI:           appCfg.MongoURI,
-		MongoDatabase:      appCfg.MongoDatabase,
-		MongoMaxPoolSize:   appCfg.MongoMaxPoolSize,
-		MongoMinPoolSize:   appCfg.MongoMinPoolSize,
-		SessionKey:         appCfg.SessionKey,
-		SessionName:        appCfg.SessionName,
-		SessionDomain:      appCfg.SessionDomain,
-		SessionMaxAge:      appCfg.SessionMaxAge,
+		MongoURI:               appCfg.MongoURI,
+		MongoDatabase:          appCfg.MongoDatabase,
+		MongoMaxPoolSize:       appCfg.MongoMaxPoolSize,
+		MongoMinPoolSize:       appCfg.MongoMinPoolSize,
+		SessionKey:             appCfg.SessionKey,
+		SessionName:            appCfg.SessionName,
+		SessionDomain:          appCfg.SessionDomain,
+		SessionMaxAge:          appCfg.SessionMaxAge,
 		IdleLogoutEnabled:      appCfg.IdleLogoutEnabled,
 		IdleLogoutTimeout:      appCfg.IdleLogoutTimeout,
 		IdleLogoutWarning:      appCfg.IdleLogoutWarning,
@@ -506,29 +506,29 @@ func BuildHandler(coreCfg *config.CoreConfig, appCfg AppConfig, deps DBDeps, log
 		RateLimitLoginLockout:  appCfg.RateLimitLoginLockout,
 		CSRFKey:                appCfg.CSRFKey,
 		APIKey:                 appCfg.APIKey,
-		StorageType:        appCfg.StorageType,
-		StorageLocalPath:   appCfg.StorageLocalPath,
-		StorageLocalURL:    appCfg.StorageLocalURL,
-		StorageS3Region:    appCfg.StorageS3Region,
-		StorageS3Bucket:    appCfg.StorageS3Bucket,
-		StorageS3Prefix:    appCfg.StorageS3Prefix,
-		StorageCFURL:       appCfg.StorageCFURL,
-		StorageCFKeyPairID: appCfg.StorageCFKeyPairID,
-		StorageCFKeyPath:   appCfg.StorageCFKeyPath,
-		MailSMTPHost:       appCfg.MailSMTPHost,
-		MailSMTPPort:       appCfg.MailSMTPPort,
-		MailSMTPUser:       appCfg.MailSMTPUser,
-		MailSMTPPass:       appCfg.MailSMTPPass,
-		MailFrom:           appCfg.MailFrom,
-		MailFromName:       appCfg.MailFromName,
-		BaseURL:            appCfg.BaseURL,
-		EmailVerifyExpiry:  appCfg.EmailVerifyExpiry,
-		AuditLogAuth:       appCfg.AuditLogAuth,
-		AuditLogAdmin:      appCfg.AuditLogAdmin,
-		GoogleClientID:     appCfg.GoogleClientID,
-		GoogleClientSecret: appCfg.GoogleClientSecret,
-		SeedAdminEmail:     appCfg.SeedAdminEmail,
-		SeedAdminName:      appCfg.SeedAdminName,
+		StorageType:            appCfg.StorageType,
+		StorageLocalPath:       appCfg.StorageLocalPath,
+		StorageLocalURL:        appCfg.StorageLocalURL,
+		StorageS3Region:        appCfg.StorageS3Region,
+		StorageS3Bucket:        appCfg.StorageS3Bucket,
+		StorageS3Prefix:        appCfg.StorageS3Prefix,
+		StorageCFURL:           appCfg.StorageCFURL,
+		StorageCFKeyPairID:     appCfg.StorageCFKeyPairID,
+		StorageCFKeyPath:       appCfg.StorageCFKeyPath,
+		MailSMTPHost:           appCfg.MailSMTPHost,
+		MailSMTPPort:           appCfg.MailSMTPPort,
+		MailSMTPUser:           appCfg.MailSMTPUser,
+		MailSMTPPass:           appCfg.MailSMTPPass,
+		MailFrom:               appCfg.MailFrom,
+		MailFromName:           appCfg.MailFromName,
+		BaseURL:                appCfg.BaseURL,
+		EmailVerifyExpiry:      appCfg.EmailVerifyExpiry,
+		AuditLogAuth:           appCfg.AuditLogAuth,
+		AuditLogAdmin:          appCfg.AuditLogAdmin,
+		GoogleClientID:         appCfg.GoogleClientID,
+		GoogleClientSecret:     appCfg.GoogleClientSecret,
+		SeedAdminEmail:         appCfg.SeedAdminEmail,
+		SeedAdminName:          appCfg.SeedAdminName,
 	}
 	statusHandler := statusfeature.NewHandler(deps.MongoClient, appCfg.BaseURL, coreCfg, statusAppCfg, logger)
 	r.Mount("/admin/status", statusfeature.Routes(statusHandler, sessionMgr))

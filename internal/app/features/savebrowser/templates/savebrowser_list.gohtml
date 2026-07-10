@@ -44,38 +44,50 @@
   </div>
 
   {{ if .SelectedGame }}
-  <!-- Players Section -->
+  <!-- Users Section -->
   <section class="bg-white dark:bg-gray-800 rounded shadow mb-4 flex flex-col" style="max-height: 45vh;">
     <div class="p-3 border-b dark:border-gray-700 flex items-center justify-between gap-4">
-      <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">Players</h2>
+      <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">Users</h2>
       <form
-        hx-get="/console/api/state/players?game={{ .SelectedGame }}"
-        hx-target="#players-section"
+        hx-get="/console/api/state/users?game={{ .SelectedGame }}"
+        hx-target="#users-section"
         hx-swap="innerHTML"
-        hx-trigger="submit, keyup changed delay:300ms from:#player-search"
+        hx-trigger="submit, keyup changed delay:300ms from:#user-search"
         class="flex gap-2 flex-1 justify-end"
       >
         <input
-          id="player-search"
+          id="user-search"
           name="search"
           type="text"
-          value="{{ .PlayerSearch }}"
-          placeholder="Search players..."
+          value="{{ .UserSearch }}"
+          placeholder="Search users..."
           class="px-3 py-1 text-sm border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded focus:outline-none focus:ring-2 focus:ring-indigo-400 flex-1 max-w-md"
         />
         <a
           href="/console/api/state?game={{ .SelectedGame }}"
-          hx-get="/console/api/state/players?game={{ .SelectedGame }}"
-          hx-target="#players-section"
+          hx-get="/console/api/state/users?game={{ .SelectedGame }}"
+          hx-target="#users-section"
           hx-swap="innerHTML"
-          onclick="document.getElementById('player-search').value = '';"
+          onclick="document.getElementById('user-search').value = '';"
           class="px-3 py-1 border dark:border-gray-600 rounded text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
         >Clear</a>
       </form>
     </div>
 
-    <div id="players-section" class="flex-1 overflow-auto">
-      {{ template "savebrowser/players_content" . }}
+    <!-- MHS dev sentinel user_id — copy and paste into the Users search above to find dev-play data. -->
+    <div class="px-3 py-2 border-b dark:border-gray-700 flex items-center gap-2 text-xs bg-gray-50 dark:bg-gray-900/40">
+      <span class="text-gray-600 dark:text-gray-400 whitespace-nowrap">MHS dev sentinel user_id:</span>
+      <code class="font-mono text-gray-800 dark:text-gray-200 select-all px-2 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded">000000000000000000000001</code>
+      <button type="button"
+              onclick="navigator.clipboard.writeText('000000000000000000000001').then(function(){var b=event.currentTarget;b.textContent='Copied';setTimeout(function(){b.textContent='Copy'},1500)});"
+              class="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
+        Copy
+      </button>
+      <span class="ml-auto text-gray-500 dark:text-gray-500 hidden sm:inline">Paste into Users search above to find dev play data.</span>
+    </div>
+
+    <div id="users-section" class="flex-1 overflow-auto">
+      {{ template "savebrowser/users_content" . }}
     </div>
   </section>
 
@@ -249,19 +261,19 @@ document.body.addEventListener('saves-deleted', function() {
   var game = getUrlParam('game');
   if (game) {
     // Get current search value from the input field
-    var searchInput = document.getElementById('player-search');
+    var searchInput = document.getElementById('user-search');
     var search = searchInput ? searchInput.value : '';
-    var url = '/console/api/state/players?game=' + encodeURIComponent(game);
+    var url = '/console/api/state/users?game=' + encodeURIComponent(game);
     if (search) {
       url += '&search=' + encodeURIComponent(search);
     }
-    // Refresh players list and clear saves section
+    // Refresh users list and clear saves section
     htmx.ajax('GET', url, {
-      target: '#players-section',
+      target: '#users-section',
       swap: 'innerHTML'
     });
-    // Show the "select a player" message
-    document.getElementById('saves-section').innerHTML = '<div class="p-4 border-b dark:border-gray-700"><h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300">States</h2></div><p class="p-4 text-sm text-gray-500 dark:text-gray-400">Select a player to view states.</p>';
+    // Show the "select a user" message
+    document.getElementById('saves-section').innerHTML = '<div class="p-4 border-b dark:border-gray-700"><h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300">States</h2></div><p class="p-4 text-sm text-gray-500 dark:text-gray-400">Select a user to view states.</p>';
   }
 });
 
@@ -418,24 +430,24 @@ document.body.addEventListener('state-created', function(event) {
 </script>
 {{ end }}
 
-{{ define "savebrowser/players_content" }}
+{{ define "savebrowser/users_content" }}
 <!-- Pagination info -->
 <div class="flex items-center justify-between mb-1 px-4 pt-3">
   <span class="text-sm text-gray-600 dark:text-gray-400">
-    {{ if .PlayerTotal }}{{ .PlayerRangeStart }}-{{ .PlayerRangeEnd }} of {{ .PlayerTotal }}{{ else }}0 of 0{{ end }}
+    {{ if .UserTotal }}{{ .UserRangeStart }}-{{ .UserRangeEnd }} of {{ .UserTotal }}{{ else }}0 of 0{{ end }}
   </span>
   <div class="flex gap-2">
-    {{ if .PlayerHasPrev }}
-    <a hx-get="/console/api/state/players?game={{ .SelectedGame }}&search={{ .PlayerSearch }}&page={{ .PlayerPrevPage }}"
-       hx-target="#players-section"
+    {{ if .UserHasPrev }}
+    <a hx-get="/console/api/state/users?game={{ .SelectedGame }}&search={{ .UserSearch }}&page={{ .UserPrevPage }}"
+       hx-target="#users-section"
        hx-swap="innerHTML"
        class="px-2 py-1 border dark:border-gray-600 rounded text-xs text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">Prev</a>
     {{ else }}
     <span class="px-2 py-1 border dark:border-gray-600 rounded text-xs text-gray-400 dark:text-gray-500">Prev</span>
     {{ end }}
-    {{ if .PlayerHasNext }}
-    <a hx-get="/console/api/state/players?game={{ .SelectedGame }}&search={{ .PlayerSearch }}&page={{ .PlayerNextPage }}"
-       hx-target="#players-section"
+    {{ if .UserHasNext }}
+    <a hx-get="/console/api/state/users?game={{ .SelectedGame }}&search={{ .UserSearch }}&page={{ .UserNextPage }}"
+       hx-target="#users-section"
        hx-swap="innerHTML"
        class="px-2 py-1 border dark:border-gray-600 rounded text-xs text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">Next</a>
     {{ else }}
@@ -446,17 +458,17 @@ document.body.addEventListener('state-created', function(event) {
 
 <!-- Table -->
 <div class="overflow-auto px-4 pb-3" style="max-height: calc(45vh - 140px);">
-  {{ if .Players }}
+  {{ if .Users }}
   <table class="min-w-full text-sm">
     <thead class="bg-gray-100 dark:bg-gray-700 sticky top-0">
       <tr class="border-b border-gray-300 dark:border-gray-600">
-        <th class="px-4 py-3 text-left text-gray-600 dark:text-gray-400 uppercase text-xs">Player ID</th>
+        <th class="px-4 py-3 text-left text-gray-600 dark:text-gray-400 uppercase text-xs">User ID</th>
         <th class="px-4 py-3 text-center text-gray-600 dark:text-gray-400 uppercase text-xs">Saves</th>
         <th class="px-4 py-3 text-right text-gray-600 dark:text-gray-400 uppercase text-xs">Actions</th>
       </tr>
     </thead>
     <tbody>
-      {{ range .Players }}
+      {{ range .Users }}
       <tr hx-get="/console/api/state/data?game={{ $.SelectedGame }}&user={{ .UserID }}&limit={{ $.SaveLimit }}"
           hx-target="#saves-section"
           hx-swap="innerHTML"
@@ -474,7 +486,7 @@ document.body.addEventListener('state-created', function(event) {
     </tbody>
   </table>
   {{ else }}
-  <p class="text-sm text-gray-500 dark:text-gray-400 py-4">No players found{{ if .PlayerSearch }} matching "{{ .PlayerSearch }}"{{ end }}.</p>
+  <p class="text-sm text-gray-500 dark:text-gray-400 py-4">No users found{{ if .UserSearch }} matching "{{ .UserSearch }}"{{ end }}.</p>
   {{ end }}
 </div>
 {{ end }}
@@ -562,9 +574,9 @@ document.body.addEventListener('state-created', function(event) {
   <p class="p-4 text-sm text-gray-500 dark:text-gray-400">No states found for this user.</p>
   {{ end }}
 {{ else if .SelectedGame }}
-<p class="p-4 text-sm text-gray-500 dark:text-gray-400">Select a player to view states.</p>
+<p class="p-4 text-sm text-gray-500 dark:text-gray-400">Select a user to view states.</p>
 {{ else }}
-<p class="p-4 text-sm text-gray-500 dark:text-gray-400">Select a game and player to view states.</p>
+<p class="p-4 text-sm text-gray-500 dark:text-gray-400">Select a game and user to view states.</p>
 {{ end }}
 </div>
 {{ end }}

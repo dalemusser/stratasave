@@ -19,10 +19,12 @@ const CollectionName = "api_stats"
 type StatType string
 
 const (
-	StatTypeSaveState    StatType = "state_save"
-	StatTypeLoadState    StatType = "state_load"
-	StatTypeSaveSettings StatType = "settings_save"
-	StatTypeLoadSettings StatType = "settings_load"
+	StatTypeSaveState      StatType = "state_save"
+	StatTypeLoadState      StatType = "state_load"
+	StatTypeDeleteState    StatType = "state_delete"
+	StatTypeSaveSettings   StatType = "settings_save"
+	StatTypeLoadSettings   StatType = "settings_load"
+	StatTypeDeleteSettings StatType = "settings_delete"
 )
 
 // Bucket represents a time bucket of aggregated statistics.

@@ -10,6 +10,7 @@ package saveapi
 import (
 	"encoding/json"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -25,6 +26,10 @@ import (
 
 // CollectionName is the MongoDB collection for player game states.
 const CollectionName = "player_states"
+
+// userIDRegex matches a 24-character lowercase hex string (Mongo ObjectID hex).
+// All user_id values must match this — no other identity forms are accepted.
+var userIDRegex = regexp.MustCompile(`^[0-9a-f]{24}$`)
 
 // PlayerState represents a saved game state in the database.
 type PlayerState struct {
@@ -72,16 +77,19 @@ func parseMaxSaves(config string) int {
 // Request body:
 //
 //	{
-//	    "user_id": "player123",
+//	    "user_id": "69b4449ec6006ac370dad9df",
 //	    "game": "mygame",
 //	    "save_data": { ... any JSON ... }
 //	}
+//
+// user_id must be a 24-character lowercase hex string (the hex form of
+// stratahub.users._id). Anything else is rejected.
 //
 // Response (201 Created):
 //
 //	{
 //	    "id": "...",
-//	    "user_id": "player123",
+//	    "user_id": "69b4449ec6006ac370dad9df",
 //	    "game": "mygame",
 //	    "timestamp": "2026-01-24T...",
 //	    "save_data": { ... }
@@ -98,6 +106,10 @@ func (h *Handler) SaveHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if in.UserID == "" || in.Game == "" || in.SaveData == nil {
 		writeJSONError(w, r, "Missing required fields", http.StatusBadRequest)
+		return
+	}
+	if !userIDRegex.MatchString(in.UserID) {
+		writeJSONError(w, r, "'user_id' must be a 24-character lowercase hex string", http.StatusBadRequest)
 		return
 	}
 
@@ -154,17 +166,19 @@ func (h *Handler) SaveHandler(w http.ResponseWriter, r *http.Request) {
 // Request body:
 //
 //	{
-//	    "user_id": "player123",
+//	    "user_id": "69b4449ec6006ac370dad9df",
 //	    "game": "mygame",
 //	    "limit": 3  // optional, defaults to 1
 //	}
+//
+// user_id must be a 24-character lowercase hex string.
 //
 // Response (200 OK): Array of states, newest first
 //
 //	[
 //	    {
 //	        "id": "...",
-//	        "user_id": "player123",
+//	        "user_id": "69b4449ec6006ac370dad9df",
 //	        "game": "mygame",
 //	        "timestamp": "2026-01-24T...",
 //	        "save_data": { ... }
@@ -182,6 +196,10 @@ func (h *Handler) LoadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if in.UserID == "" || in.Game == "" {
 		writeJSONError(w, r, "Missing required fields", http.StatusBadRequest)
+		return
+	}
+	if !userIDRegex.MatchString(in.UserID) {
+		writeJSONError(w, r, "'user_id' must be a 24-character lowercase hex string", http.StatusBadRequest)
 		return
 	}
 	if in.Limit <= 0 {
@@ -231,6 +249,76 @@ func (h *Handler) LoadHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(out); err != nil {
 		h.logger.Error("failed to encode load response", zap.Error(err))
+	}
+}
+
+// DeleteHandler handles POST /state/delete requests.
+// It deletes all saved game state for a user/game from the player_states
+// collection. Because state is stored as an append-only history, this removes
+// every saved state for the given user in the given game.
+//
+// Request body:
+//
+//	{
+//	    "user_id": "69b4449ec6006ac370dad9df",
+//	    "game": "mygame"
+//	}
+//
+// user_id must be a 24-character lowercase hex string.
+//
+// Response (200 OK):
+//
+//	{
+//	    "user_id": "69b4449ec6006ac370dad9df",
+//	    "game": "mygame",
+//	    "deleted": 3
+//	}
+//
+// Deleting when no states exist is not an error; "deleted" will be 0.
+func (h *Handler) DeleteHandler(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		UserID string `json:"user_id"`
+		Game   string `json:"game"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeJSONError(w, r, "Invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+	if in.UserID == "" || in.Game == "" {
+		writeJSONError(w, r, "Missing required fields", http.StatusBadRequest)
+		return
+	}
+	if !userIDRegex.MatchString(in.UserID) {
+		writeJSONError(w, r, "'user_id' must be a 24-character lowercase hex string", http.StatusBadRequest)
+		return
+	}
+
+	coll := h.db.Collection(CollectionName)
+	filter := bson.M{"user_id": in.UserID, "game": in.Game}
+	res, err := coll.DeleteMany(r.Context(), filter)
+	if err != nil {
+		h.logger.Error("failed to delete game state",
+			zap.String("game", in.Game),
+			zap.String("user_id", in.UserID),
+			zap.Error(err),
+		)
+		writeJSONError(w, r, "Failed to delete saves: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	h.logger.Info("game state deleted",
+		zap.String("game", in.Game),
+		zap.String("user_id", in.UserID),
+		zap.Int64("deleted", res.DeletedCount),
+	)
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(map[string]any{
+		"user_id": in.UserID,
+		"game":    in.Game,
+		"deleted": res.DeletedCount,
+	}); err != nil {
+		h.logger.Error("failed to encode delete response", zap.Error(err))
 	}
 }
 

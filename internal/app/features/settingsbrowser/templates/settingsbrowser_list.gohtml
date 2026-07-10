@@ -74,6 +74,18 @@
       </form>
     </div>
 
+    <!-- MHS dev sentinel user_id — copy and paste into the Users search above to find dev-play data. -->
+    <div class="px-3 py-2 border-b dark:border-gray-700 flex items-center gap-2 text-xs bg-gray-50 dark:bg-gray-900/40">
+      <span class="text-gray-600 dark:text-gray-400 whitespace-nowrap">MHS dev sentinel user_id:</span>
+      <code class="font-mono text-gray-800 dark:text-gray-200 select-all px-2 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded">000000000000000000000001</code>
+      <button type="button"
+              onclick="navigator.clipboard.writeText('000000000000000000000001').then(function(){var b=event.currentTarget;b.textContent='Copied';setTimeout(function(){b.textContent='Copy'},1500)});"
+              class="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
+        Copy
+      </button>
+      <span class="ml-auto text-gray-500 dark:text-gray-500 hidden sm:inline">Paste into Users search above to find dev play data.</span>
+    </div>
+
     <div id="users-section" class="flex-1 overflow-auto">
       {{ template "settingsbrowser/users_content" . }}
     </div>

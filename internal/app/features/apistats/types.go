@@ -32,10 +32,12 @@ type ListVM struct {
 	Summaries []SummaryVM
 
 	// Time series data for charts
-	StateSaveData    []DataPointVM
-	StateLoadData    []DataPointVM
-	SettingsSaveData []DataPointVM
-	SettingsLoadData []DataPointVM
+	StateSaveData      []DataPointVM
+	StateLoadData      []DataPointVM
+	StateDeleteData    []DataPointVM
+	SettingsSaveData   []DataPointVM
+	SettingsLoadData   []DataPointVM
+	SettingsDeleteData []DataPointVM
 
 	// Data resolutions present in the range
 	DataResolutions []string
@@ -112,10 +114,14 @@ func StatTypeLabel(st apistats.StatType) string {
 		return "Save State"
 	case apistats.StatTypeLoadState:
 		return "Load State"
+	case apistats.StatTypeDeleteState:
+		return "Delete State"
 	case apistats.StatTypeSaveSettings:
 		return "Save Settings"
 	case apistats.StatTypeLoadSettings:
 		return "Load Settings"
+	case apistats.StatTypeDeleteSettings:
+		return "Delete Settings"
 	default:
 		return string(st)
 	}

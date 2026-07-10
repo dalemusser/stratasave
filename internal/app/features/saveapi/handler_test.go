@@ -20,7 +20,7 @@ func TestHandler_SaveHandler(t *testing.T) {
 
 	t.Run("successful save", func(t *testing.T) {
 		body := map[string]interface{}{
-			"user_id": "player123",
+			"user_id": "111111111111111111111111",
 			"game":    "testgame",
 			"save_data": map[string]interface{}{
 				"level":     5,
@@ -45,8 +45,8 @@ func TestHandler_SaveHandler(t *testing.T) {
 			t.Fatalf("failed to decode response: %v", err)
 		}
 
-		if resp.UserID != "player123" {
-			t.Errorf("response user_id = %q, want %q", resp.UserID, "player123")
+		if resp.UserID != "111111111111111111111111" {
+			t.Errorf("response user_id = %q, want %q", resp.UserID, "111111111111111111111111")
 		}
 		if resp.Game != "testgame" {
 			t.Errorf("response game = %q, want %q", resp.Game, "testgame")
@@ -88,7 +88,7 @@ func TestHandler_SaveHandler(t *testing.T) {
 
 	t.Run("missing game", func(t *testing.T) {
 		body := map[string]interface{}{
-			"user_id":   "player123",
+			"user_id":   "111111111111111111111111",
 			"save_data": map[string]interface{}{"level": 1},
 		}
 		bodyBytes, _ := json.Marshal(body)
@@ -106,7 +106,7 @@ func TestHandler_SaveHandler(t *testing.T) {
 
 	t.Run("missing save_data", func(t *testing.T) {
 		body := map[string]interface{}{
-			"user_id": "player123",
+			"user_id": "111111111111111111111111",
 			"game":    "testgame",
 		}
 		bodyBytes, _ := json.Marshal(body)
@@ -154,25 +154,25 @@ func TestHandler_LoadHandler(t *testing.T) {
 
 		saves := []interface{}{
 			bson.M{
-				"user_id":   "player123",
+				"user_id":   "111111111111111111111111",
 				"game":      "testgame",
 				"timestamp": "2026-01-24T10:00:00Z",
 				"save_data": bson.M{"level": 1, "score": 100},
 			},
 			bson.M{
-				"user_id":   "player123",
+				"user_id":   "111111111111111111111111",
 				"game":      "testgame",
 				"timestamp": "2026-01-24T11:00:00Z",
 				"save_data": bson.M{"level": 2, "score": 200},
 			},
 			bson.M{
-				"user_id":   "player123",
+				"user_id":   "111111111111111111111111",
 				"game":      "testgame",
 				"timestamp": "2026-01-24T12:00:00Z",
 				"save_data": bson.M{"level": 3, "score": 300},
 			},
 			bson.M{
-				"user_id":   "otherplayer",
+				"user_id":   "444444444444444444444444",
 				"game":      "testgame",
 				"timestamp": "2026-01-24T10:00:00Z",
 				"save_data": bson.M{"level": 5, "score": 500},
@@ -185,7 +185,7 @@ func TestHandler_LoadHandler(t *testing.T) {
 		setupTestSaves()
 
 		body := map[string]interface{}{
-			"user_id": "player123",
+			"user_id": "111111111111111111111111",
 			"game":    "testgame",
 		}
 		bodyBytes, _ := json.Marshal(body)
@@ -214,7 +214,7 @@ func TestHandler_LoadHandler(t *testing.T) {
 		setupTestSaves()
 
 		body := map[string]interface{}{
-			"user_id": "player123",
+			"user_id": "111111111111111111111111",
 			"game":    "testgame",
 			"limit":   3,
 		}
@@ -241,15 +241,15 @@ func TestHandler_LoadHandler(t *testing.T) {
 
 		// Verify they're the correct user's saves
 		for _, save := range resp {
-			if save.UserID != "player123" {
-				t.Errorf("save user_id = %q, want %q", save.UserID, "player123")
+			if save.UserID != "111111111111111111111111" {
+				t.Errorf("save user_id = %q, want %q", save.UserID, "111111111111111111111111")
 			}
 		}
 	})
 
 	t.Run("load no results", func(t *testing.T) {
 		body := map[string]interface{}{
-			"user_id": "nonexistent",
+			"user_id": "999999999999999999999999",
 			"game":    "testgame",
 		}
 		bodyBytes, _ := json.Marshal(body)
@@ -297,7 +297,7 @@ func TestHandler_LoadHandler(t *testing.T) {
 
 	t.Run("missing game", func(t *testing.T) {
 		body := map[string]interface{}{
-			"user_id": "player123",
+			"user_id": "111111111111111111111111",
 		}
 		bodyBytes, _ := json.Marshal(body)
 
@@ -325,6 +325,127 @@ func TestHandler_LoadHandler(t *testing.T) {
 	})
 }
 
+func TestHandler_DeleteHandler(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	logger := zap.NewNop()
+	h := NewHandler(db, logger, "all")
+
+	coll := db.Collection(CollectionName)
+
+	seed := func() {
+		ctx, cancel := testutil.TestContext()
+		defer cancel()
+		saves := []interface{}{
+			bson.M{"user_id": "111111111111111111111111", "game": "testgame", "timestamp": time.Now().UTC(), "save_data": bson.M{"level": 1}},
+			bson.M{"user_id": "111111111111111111111111", "game": "testgame", "timestamp": time.Now().UTC(), "save_data": bson.M{"level": 2}},
+			bson.M{"user_id": "111111111111111111111111", "game": "othergame", "timestamp": time.Now().UTC(), "save_data": bson.M{"level": 9}},
+			bson.M{"user_id": "444444444444444444444444", "game": "testgame", "timestamp": time.Now().UTC(), "save_data": bson.M{"level": 5}},
+		}
+		coll.InsertMany(ctx, saves)
+	}
+
+	doDelete := func(body map[string]interface{}) *httptest.ResponseRecorder {
+		bodyBytes, _ := json.Marshal(body)
+		req := httptest.NewRequest(http.MethodPost, "/delete", bytes.NewReader(bodyBytes))
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		h.DeleteHandler(rec, req)
+		return rec
+	}
+
+	t.Run("deletes all state for user/game and isolates others", func(t *testing.T) {
+		seed()
+
+		rec := doDelete(map[string]interface{}{
+			"user_id": "111111111111111111111111",
+			"game":    "testgame",
+		})
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("DeleteHandler() status = %d, want %d", rec.Code, http.StatusOK)
+		}
+
+		var resp struct {
+			UserID  string `json:"user_id"`
+			Game    string `json:"game"`
+			Deleted int64  `json:"deleted"`
+		}
+		if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+		if resp.Deleted != 2 {
+			t.Errorf("deleted = %d, want 2", resp.Deleted)
+		}
+
+		ctx, cancel := testutil.TestContext()
+		defer cancel()
+
+		// The targeted user/game should be empty.
+		gone, _ := coll.CountDocuments(ctx, bson.M{"user_id": "111111111111111111111111", "game": "testgame"})
+		if gone != 0 {
+			t.Errorf("expected 0 remaining for deleted user/game, got %d", gone)
+		}
+		// Same user, different game is untouched.
+		otherGame, _ := coll.CountDocuments(ctx, bson.M{"user_id": "111111111111111111111111", "game": "othergame"})
+		if otherGame != 1 {
+			t.Errorf("expected 1 remaining for other game, got %d", otherGame)
+		}
+		// Different user, same game is untouched.
+		otherUser, _ := coll.CountDocuments(ctx, bson.M{"user_id": "444444444444444444444444", "game": "testgame"})
+		if otherUser != 1 {
+			t.Errorf("expected 1 remaining for other user, got %d", otherUser)
+		}
+	})
+
+	t.Run("delete with no matching data returns 200 deleted 0", func(t *testing.T) {
+		rec := doDelete(map[string]interface{}{
+			"user_id": "999999999999999999999999",
+			"game":    "testgame",
+		})
+		if rec.Code != http.StatusOK {
+			t.Fatalf("DeleteHandler() status = %d, want %d", rec.Code, http.StatusOK)
+		}
+		var resp struct {
+			Deleted int64 `json:"deleted"`
+		}
+		json.NewDecoder(rec.Body).Decode(&resp)
+		if resp.Deleted != 0 {
+			t.Errorf("deleted = %d, want 0", resp.Deleted)
+		}
+	})
+
+	t.Run("missing user_id", func(t *testing.T) {
+		rec := doDelete(map[string]interface{}{"game": "testgame"})
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("status = %d, want %d", rec.Code, http.StatusBadRequest)
+		}
+	})
+
+	t.Run("missing game", func(t *testing.T) {
+		rec := doDelete(map[string]interface{}{"user_id": "111111111111111111111111"})
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("status = %d, want %d", rec.Code, http.StatusBadRequest)
+		}
+	})
+
+	t.Run("invalid user_id form", func(t *testing.T) {
+		rec := doDelete(map[string]interface{}{"user_id": "not-a-hex", "game": "testgame"})
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("status = %d, want %d", rec.Code, http.StatusBadRequest)
+		}
+	})
+
+	t.Run("invalid JSON", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/delete", bytes.NewReader([]byte("not json")))
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		h.DeleteHandler(rec, req)
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("status = %d, want %d", rec.Code, http.StatusBadRequest)
+		}
+	})
+}
+
 func TestHandler_SaveAndLoad_Integration(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	logger := zap.NewNop()
@@ -332,7 +453,7 @@ func TestHandler_SaveAndLoad_Integration(t *testing.T) {
 
 	// Save some data
 	saveBody := map[string]interface{}{
-		"user_id": "integrationtest",
+		"user_id": "555555555555555555555555",
 		"game":    "integrationgame",
 		"save_data": map[string]interface{}{
 			"checkpoint": "boss_room",
@@ -357,7 +478,7 @@ func TestHandler_SaveAndLoad_Integration(t *testing.T) {
 
 	// Load the data back
 	loadBody := map[string]interface{}{
-		"user_id": "integrationtest",
+		"user_id": "555555555555555555555555",
 		"game":    "integrationgame",
 	}
 	loadBytes, _ := json.Marshal(loadBody)
@@ -383,8 +504,8 @@ func TestHandler_SaveAndLoad_Integration(t *testing.T) {
 	if loaded.ID != savedState.ID {
 		t.Errorf("loaded ID = %s, want %s", loaded.ID.Hex(), savedState.ID.Hex())
 	}
-	if loaded.UserID != "integrationtest" {
-		t.Errorf("loaded user_id = %q, want %q", loaded.UserID, "integrationtest")
+	if loaded.UserID != "555555555555555555555555" {
+		t.Errorf("loaded user_id = %q, want %q", loaded.UserID, "555555555555555555555555")
 	}
 	if loaded.Game != "integrationgame" {
 		t.Errorf("loaded game = %q, want %q", loaded.Game, "integrationgame")
@@ -409,7 +530,7 @@ func TestRoutes(t *testing.T) {
 
 	t.Run("save without auth returns 401", func(t *testing.T) {
 		body := map[string]interface{}{
-			"user_id":   "player123",
+			"user_id":   "111111111111111111111111",
 			"game":      "testgame",
 			"save_data": map[string]interface{}{"level": 1},
 		}
@@ -428,7 +549,7 @@ func TestRoutes(t *testing.T) {
 
 	t.Run("save with valid auth succeeds", func(t *testing.T) {
 		body := map[string]interface{}{
-			"user_id":   "player123",
+			"user_id":   "111111111111111111111111",
 			"game":      "testgame",
 			"save_data": map[string]interface{}{"level": 1},
 		}
@@ -448,7 +569,7 @@ func TestRoutes(t *testing.T) {
 
 	t.Run("load without auth returns 401", func(t *testing.T) {
 		body := map[string]interface{}{
-			"user_id": "player123",
+			"user_id": "111111111111111111111111",
 			"game":    "testgame",
 		}
 		bodyBytes, _ := json.Marshal(body)
@@ -466,7 +587,7 @@ func TestRoutes(t *testing.T) {
 
 	t.Run("load with valid auth succeeds", func(t *testing.T) {
 		body := map[string]interface{}{
-			"user_id": "player123",
+			"user_id": "111111111111111111111111",
 			"game":    "testgame",
 		}
 		bodyBytes, _ := json.Marshal(body)
@@ -483,9 +604,46 @@ func TestRoutes(t *testing.T) {
 		}
 	})
 
+	t.Run("delete without auth returns 401", func(t *testing.T) {
+		body := map[string]interface{}{
+			"user_id": "111111111111111111111111",
+			"game":    "testgame",
+		}
+		bodyBytes, _ := json.Marshal(body)
+
+		req := httptest.NewRequest(http.MethodPost, "/delete", bytes.NewReader(bodyBytes))
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+
+		router.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusUnauthorized {
+			t.Errorf("unauthenticated request status = %d, want %d", rec.Code, http.StatusUnauthorized)
+		}
+	})
+
+	t.Run("delete with valid auth succeeds", func(t *testing.T) {
+		body := map[string]interface{}{
+			"user_id": "111111111111111111111111",
+			"game":    "testgame",
+		}
+		bodyBytes, _ := json.Marshal(body)
+
+		req := httptest.NewRequest(http.MethodPost, "/delete", bytes.NewReader(bodyBytes))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer test-api-key")
+		rec := httptest.NewRecorder()
+
+		router.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Errorf("authenticated request status = %d, want %d", rec.Code, http.StatusOK)
+		}
+	})
+
 	t.Run("wrong api key returns 401", func(t *testing.T) {
 		body := map[string]interface{}{
-			"user_id":   "player123",
+			"user_id":   "111111111111111111111111",
 			"game":      "testgame",
 			"save_data": map[string]interface{}{"level": 1},
 		}

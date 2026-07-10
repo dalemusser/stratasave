@@ -18,20 +18,20 @@ type ListVM struct {
 	Games        []string
 	SelectedGame string
 
-	// Player list
-	Players      []PlayerRowVM
-	PlayerSearch string
+	// User list
+	Users        []UserRowVM
+	UserSearch   string
 	SelectedUser string
 
-	// Pagination for players
-	PlayerTotal      int64
-	PlayerPage       int
-	PlayerHasPrev    bool
-	PlayerHasNext    bool
-	PlayerRangeStart int
-	PlayerRangeEnd   int
-	PlayerPrevPage   int
-	PlayerNextPage   int
+	// Pagination for users
+	UserTotal        int64
+	UserPage         int
+	UserHasPrev      bool
+	UserHasNext      bool
+	UserRangeStart int
+	UserRangeEnd   int
+	UserPrevPage     int
+	UserNextPage     int
 
 	// Save results (when user selected)
 	Saves      []SaveRowVM
@@ -46,8 +46,8 @@ type ListVM struct {
 	DefaultLimit int
 }
 
-// PlayerRowVM represents a row in the players table.
-type PlayerRowVM struct {
+// UserRowVM represents a row in the users table.
+type UserRowVM struct {
 	UserID    string
 	SaveCount int64
 }
@@ -76,20 +76,20 @@ type SavesPartialVM struct {
 	NextCursor   string
 }
 
-// PlayersPartialVM is the view model for the players table HTMX partial.
-type PlayersPartialVM struct {
+// UsersPartialVM is the view model for the users table HTMX partial.
+type UsersPartialVM struct {
 	SelectedGame     string
 	SelectedUser     string
-	PlayerSearch     string
-	Players          []PlayerRowVM
-	PlayerTotal      int64
-	PlayerPage       int
-	PlayerHasPrev    bool
-	PlayerHasNext    bool
-	PlayerRangeStart int
-	PlayerRangeEnd   int
-	PlayerPrevPage   int
-	PlayerNextPage   int
+	UserSearch       string
+	Users            []UserRowVM
+	UserTotal        int64
+	UserPage         int
+	UserHasPrev      bool
+	UserHasNext      bool
+	UserRangeStart int
+	UserRangeEnd   int
+	UserPrevPage     int
+	UserNextPage     int
 	Limit            int
 }
 

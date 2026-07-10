@@ -16,7 +16,7 @@ func Routes(h *Handler, sm *auth.SessionManager) chi.Router {
 
 	// HTMX partials
 	r.Get("/game-picker", h.ServeGamePicker)
-	r.Get("/players", h.ServePlayers)
+	r.Get("/users", h.ServeUsers)
 	r.Get("/data", h.ServeSaves)
 
 	// Playground - interactive API testing
