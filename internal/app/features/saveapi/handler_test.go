@@ -523,7 +523,7 @@ func TestRoutes(t *testing.T) {
 	logger := zap.NewNop()
 	h := NewHandler(db, logger, "all")
 
-	router := Routes(h, nil, "test-api-key", logger)
+	router := Routes(h, nil, []string{"test-api-key"}, []string{"test-admin-key"}, logger)
 	if router == nil {
 		t.Fatal("Routes() returned nil")
 	}
@@ -631,7 +631,7 @@ func TestRoutes(t *testing.T) {
 
 		req := httptest.NewRequest(http.MethodPost, "/delete", bytes.NewReader(bodyBytes))
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer test-api-key")
+		req.Header.Set("Authorization", "Bearer test-admin-key")
 		rec := httptest.NewRecorder()
 
 		router.ServeHTTP(rec, req)
@@ -913,5 +913,57 @@ func TestHandler_CleanupIsolatesGames(t *testing.T) {
 	countB, _ := coll.CountDocuments(ctx, bson.M{"user_id": userID, "game": gameB})
 	if countB != 3 {
 		t.Errorf("game B: expected 3 saves (unchanged), got %d", countB)
+	}
+}
+
+// The key a game client holds is visible in the page that hosts the game, so
+// it must not be able to delete a student's saves: delete takes its own key.
+func TestRoutesDeleteKey(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	logger := zap.NewNop()
+	h := NewHandler(db, logger, "all")
+	router := Routes(h, nil, []string{"client-key", "client-key-2"}, []string{"admin-key"}, logger)
+
+	post := func(path, key string, body map[string]interface{}) int {
+		bodyBytes, _ := json.Marshal(body)
+		req := httptest.NewRequest(http.MethodPost, path, bytes.NewReader(bodyBytes))
+		req.Header.Set("Content-Type", "application/json")
+		if key != "" {
+			req.Header.Set("Authorization", "Bearer "+key)
+		}
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		return rec.Code
+	}
+	save := map[string]interface{}{
+		"user_id":   "111111111111111111111111",
+		"game":      "testgame",
+		"save_data": map[string]interface{}{"level": 1},
+	}
+	who := map[string]interface{}{"user_id": "111111111111111111111111", "game": "testgame"}
+
+	tests := []struct {
+		name string
+		path string
+		key  string
+		body map[string]interface{}
+		want int
+	}{
+		{"save with the client key", "/save", "client-key", save, http.StatusCreated},
+		{"save with the second client key", "/save", "client-key-2", save, http.StatusCreated},
+		{"save with the admin key", "/save", "admin-key", save, http.StatusUnauthorized},
+		{"load with the second client key", "/load", "client-key-2", who, http.StatusOK},
+		{"load with the admin key", "/load", "admin-key", who, http.StatusUnauthorized},
+		{"delete with a client key", "/delete", "client-key", who, http.StatusUnauthorized},
+		{"delete with the second client key", "/delete", "client-key-2", who, http.StatusUnauthorized},
+		{"delete without a key", "/delete", "", who, http.StatusUnauthorized},
+		{"delete with the admin key", "/delete", "admin-key", who, http.StatusOK},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := post(tt.path, tt.key, tt.body); got != tt.want {
+				t.Errorf("status = %d, want %d", got, tt.want)
+			}
+		})
 	}
 }

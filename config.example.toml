@@ -136,6 +136,18 @@ rate_limit_login_lockout = "15m"
 # When set, allows Bearer token authentication for API endpoints
 api_key = ""
 
+# Further API keys that are also accepted, comma-separated. To replace a key
+# without downtime: add the new key here, move the clients to it, then make it
+# api_key and remove the old one.
+api_keys_extra = ""
+
+# API key for the delete endpoints (/api/state/delete, /api/settings/delete).
+# When set, they accept only this key. Game clients hold api_key (it is in
+# the page that hosts the game), so it should not be able to delete; give
+# this key to servers only. When empty, the delete endpoints accept the keys
+# above.
+admin_api_key = ""
+
 # =============================================================================
 # FILE STORAGE
 # =============================================================================

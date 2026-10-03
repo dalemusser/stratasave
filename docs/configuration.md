@@ -179,6 +179,8 @@ rate_limit_enabled = false
 |-----|------|---------|-------------|
 | `csrf_key` | string | *(dev default)* | CSRF token signing key (32+ chars in production) |
 | `api_key` | string | `""` | API key for external API access (empty = disabled) |
+| `api_keys_extra` | string | `""` | Further accepted API keys, comma-separated; lets a key be replaced without downtime (add the new key here, move the clients, then make it `api_key` and remove the old one) |
+| `admin_api_key` | string | `""` | API key for the delete endpoints. When set, `/api/state/delete` and `/api/settings/delete` accept only this key; keep it on servers, never in a game client. Empty = the delete endpoints accept the keys above |
 
 ---
 

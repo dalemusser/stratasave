@@ -296,17 +296,17 @@ func BuildHandler(coreCfg *config.CoreConfig, appCfg AppConfig, deps DBDeps, log
 	// New API endpoints: POST /api/state/save and POST /api/state/load
 	r.Route("/api/state", func(r chi.Router) {
 		r.Use(ledger.Middleware(apiLedgerConfig))
-		r.Mount("/", saveapifeature.Routes(saveapiHandler, apiStatsRecorder, appCfg.APIKey, logger))
+		r.Mount("/", saveapifeature.Routes(saveapiHandler, apiStatsRecorder, appCfg.APIKeys, appCfg.DeleteAPIKeys(), logger))
 	})
 
 	// Legacy endpoints for backward compatibility: POST /save and POST /load
 	r.Route("/save", func(r chi.Router) {
 		r.Use(ledger.Middleware(apiLedgerConfig))
-		r.Mount("/", saveapifeature.LegacyRoutes(saveapiHandler, apiStatsRecorder, appCfg.APIKey, logger))
+		r.Mount("/", saveapifeature.LegacyRoutes(saveapiHandler, apiStatsRecorder, appCfg.APIKeys, logger))
 	})
 	r.Route("/load", func(r chi.Router) {
 		r.Use(ledger.Middleware(apiLedgerConfig))
-		r.Mount("/", saveapifeature.LegacyLoadRoutes(saveapiHandler, apiStatsRecorder, appCfg.APIKey, logger))
+		r.Mount("/", saveapifeature.LegacyLoadRoutes(saveapiHandler, apiStatsRecorder, appCfg.APIKeys, logger))
 	})
 
 	// ─────────────────────────────────────────────────────────────────────────────
@@ -317,7 +317,7 @@ func BuildHandler(coreCfg *config.CoreConfig, appCfg AppConfig, deps DBDeps, log
 	settingsapiHandler := settingsapifeature.NewHandler(deps.MongoDatabase, logger)
 	r.Route("/api/settings", func(r chi.Router) {
 		r.Use(ledger.Middleware(apiLedgerConfig))
-		r.Mount("/", settingsapifeature.Routes(settingsapiHandler, apiStatsRecorder, appCfg.APIKey, logger))
+		r.Mount("/", settingsapifeature.Routes(settingsapiHandler, apiStatsRecorder, appCfg.APIKeys, appCfg.DeleteAPIKeys(), logger))
 	})
 
 	// Health check endpoints for load balancers and orchestrators

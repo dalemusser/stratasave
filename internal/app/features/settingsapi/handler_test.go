@@ -363,7 +363,7 @@ func TestRoutes(t *testing.T) {
 	logger := zap.NewNop()
 	h := NewHandler(db, logger)
 
-	router := Routes(h, nil, "test-api-key", logger)
+	router := Routes(h, nil, []string{"test-api-key"}, []string{"test-admin-key"}, logger)
 	if router == nil {
 		t.Fatal("Routes() returned nil")
 	}
@@ -471,7 +471,7 @@ func TestRoutes(t *testing.T) {
 
 		req := httptest.NewRequest(http.MethodPost, "/delete", bytes.NewReader(bodyBytes))
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer test-api-key")
+		req.Header.Set("Authorization", "Bearer test-admin-key")
 		rec := httptest.NewRecorder()
 
 		router.ServeHTTP(rec, req)
@@ -480,4 +480,50 @@ func TestRoutes(t *testing.T) {
 			t.Errorf("authenticated request status = %d, want %d", rec.Code, http.StatusOK)
 		}
 	})
+}
+
+// Delete takes its own key: the key game clients hold must not be able to
+// remove a student's settings (see saveapi.Routes).
+func TestRoutesDeleteKey(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	logger := zap.NewNop()
+	h := NewHandler(db, logger)
+	router := Routes(h, nil, []string{"client-key", "client-key-2"}, []string{"admin-key"}, logger)
+
+	post := func(path, key string, body map[string]interface{}) int {
+		bodyBytes, _ := json.Marshal(body)
+		req := httptest.NewRequest(http.MethodPost, path, bytes.NewReader(bodyBytes))
+		req.Header.Set("Content-Type", "application/json")
+		if key != "" {
+			req.Header.Set("Authorization", "Bearer "+key)
+		}
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		return rec.Code
+	}
+	save := map[string]interface{}{
+		"user_id":       "111111111111111111111111",
+		"game":          "testgame",
+		"settings_data": map[string]interface{}{"volume": 0.5},
+	}
+	who := map[string]interface{}{"user_id": "111111111111111111111111", "game": "testgame"}
+
+	if got := post("/save", "client-key-2", save); got < 200 || got > 299 {
+		t.Fatalf("save with the second client key: status = %d, want 2xx", got)
+	}
+	if got := post("/save", "admin-key", save); got != http.StatusUnauthorized {
+		t.Errorf("save with the admin key: status = %d, want %d", got, http.StatusUnauthorized)
+	}
+	if got := post("/delete", "client-key", who); got != http.StatusUnauthorized {
+		t.Errorf("delete with a client key: status = %d, want %d", got, http.StatusUnauthorized)
+	}
+	if got := post("/delete", "", who); got != http.StatusUnauthorized {
+		t.Errorf("delete without a key: status = %d, want %d", got, http.StatusUnauthorized)
+	}
+	if got := post("/load", "client-key", who); got != http.StatusOK {
+		t.Errorf("load after the refused deletes: status = %d, want %d (the settings are still there)", got, http.StatusOK)
+	}
+	if got := post("/delete", "admin-key", who); got != http.StatusOK {
+		t.Errorf("delete with the admin key: status = %d, want %d", got, http.StatusOK)
+	}
 }

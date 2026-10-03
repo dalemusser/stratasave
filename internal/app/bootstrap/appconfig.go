@@ -57,6 +57,15 @@ type AppConfig struct {
 	// When set, enables Bearer token authentication for /api/* routes.
 	// Leave empty to disable API key authentication.
 	APIKey string
+	// Every accepted API key: APIKey first, then the keys of api_keys_extra.
+	// More than one lets a key be replaced without downtime (add the new key,
+	// move the clients to it, remove the old one).
+	APIKeys []string
+	// AdminAPIKey is the key for the delete endpoints. Game clients receive
+	// APIKey in the page that hosts the game, so it cannot guard a delete;
+	// this one is held by servers only (StrataHub). When empty, the delete
+	// endpoints accept APIKeys.
+	AdminAPIKey string
 
 	// File storage configuration
 	StorageType      string // Storage backend: "local" or "s3"
@@ -103,4 +112,13 @@ type AppConfig struct {
 
 	// API stats configuration
 	APIStatsBucket time.Duration // Bucket duration for API stats (default: 1h)
+}
+
+// DeleteAPIKeys returns the keys the delete endpoints accept: the admin key
+// alone when one is configured, otherwise the regular API keys.
+func (c AppConfig) DeleteAPIKeys() []string {
+	if c.AdminAPIKey != "" {
+		return []string{c.AdminAPIKey}
+	}
+	return c.APIKeys
 }
