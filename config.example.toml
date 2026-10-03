@@ -141,6 +141,19 @@ api_key = ""
 # api_key and remove the old one.
 api_keys_extra = ""
 
+# An API key accepted only for particular user ids. It is for a key that
+# cannot be kept secret, such as one built into a game's source for running
+# the game without a host: it may read and write the data of the game's
+# built-in developer user and nobody else's, and it is never accepted by a
+# delete endpoint.
+api_key_restricted = ""
+# The user ids the restricted key may be used for, comma-separated.
+api_key_restricted_user_ids = "000000000000000000000001"
+# true: a request with the restricted key about any other user is refused
+# (403). false: it is let through and logged ("restricted API key used outside
+# its user ids"), which shows who still uses the key before refusing starts.
+api_key_restricted_enforce = true
+
 # API key for the delete endpoints (/api/state/delete, /api/settings/delete).
 # When set, they accept only this key. Game clients hold api_key (it is in
 # the page that hosts the game), so it should not be able to delete; give

@@ -19,10 +19,11 @@ import (
 //   - POST /api/settings/delete - Delete a user's saved settings
 //
 // Authentication is via API key (Bearer token in Authorization header).
-// Save and load accept apiKeys, the keys game clients hold; delete accepts
-// deleteKeys, held by servers only (see saveapi.Routes).
+// Save and load accept apiKeys, the keys game clients hold, and the
+// restricted key for its own user ids; delete accepts deleteKeys, held by
+// servers only (see saveapi.Routes).
 // CORS is permissive (allows any origin) since API key auth is used.
-func Routes(h *Handler, recorder *apistats.Recorder, apiKeys, deleteKeys []string, logger *zap.Logger) http.Handler {
+func Routes(h *Handler, recorder *apistats.Recorder, apiKeys []string, restricted auth.RestrictedKey, deleteKeys []string, logger *zap.Logger) http.Handler {
 	r := chi.NewRouter()
 
 	// API CORS - permissive for API key auth
@@ -30,14 +31,14 @@ func Routes(h *Handler, recorder *apistats.Recorder, apiKeys, deleteKeys []strin
 
 	// Save endpoint with stats tracking
 	r.Route("/save", func(sr chi.Router) {
-		sr.Use(auth.APIKeyAuth(apiKeys, logger))
+		sr.Use(auth.APIKeyAuthRestricted(apiKeys, restricted, logger))
 		sr.Use(apistats.MiddlewareWithRecorder(recorder, apistatsstore.StatTypeSaveSettings))
 		sr.Post("/", h.SaveHandler)
 	})
 
 	// Load endpoint with stats tracking
 	r.Route("/load", func(sr chi.Router) {
-		sr.Use(auth.APIKeyAuth(apiKeys, logger))
+		sr.Use(auth.APIKeyAuthRestricted(apiKeys, restricted, logger))
 		sr.Use(apistats.MiddlewareWithRecorder(recorder, apistatsstore.StatTypeLoadSettings))
 		sr.Post("/", h.LoadHandler)
 	})

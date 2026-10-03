@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/dalemusser/stratasave/internal/app/system/auth"
 	"github.com/dalemusser/stratasave/internal/testutil"
 	"go.uber.org/zap"
 )
@@ -363,7 +364,7 @@ func TestRoutes(t *testing.T) {
 	logger := zap.NewNop()
 	h := NewHandler(db, logger)
 
-	router := Routes(h, nil, []string{"test-api-key"}, []string{"test-admin-key"}, logger)
+	router := Routes(h, nil, []string{"test-api-key"}, auth.RestrictedKey{}, []string{"test-admin-key"}, logger)
 	if router == nil {
 		t.Fatal("Routes() returned nil")
 	}
@@ -488,7 +489,8 @@ func TestRoutesDeleteKey(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	logger := zap.NewNop()
 	h := NewHandler(db, logger)
-	router := Routes(h, nil, []string{"client-key", "client-key-2"}, []string{"admin-key"}, logger)
+	restricted := auth.RestrictedKey{Key: "public-key", UserIDs: []string{"000000000000000000000001"}, Enforce: true}
+	router := Routes(h, nil, []string{"client-key", "client-key-2"}, restricted, []string{"admin-key"}, logger)
 
 	post := func(path, key string, body map[string]interface{}) int {
 		bodyBytes, _ := json.Marshal(body)
@@ -525,5 +527,20 @@ func TestRoutesDeleteKey(t *testing.T) {
 	}
 	if got := post("/delete", "admin-key", who); got != http.StatusOK {
 		t.Errorf("delete with the admin key: status = %d, want %d", got, http.StatusOK)
+	}
+
+	// The restricted key: its own user only, and never a delete.
+	own := map[string]interface{}{"user_id": "000000000000000000000001", "game": "testgame"}
+	if got := post("/save", "public-key", save); got != http.StatusForbidden {
+		t.Errorf("restricted key, another user's save: status = %d, want %d", got, http.StatusForbidden)
+	}
+	if got := post("/load", "public-key", who); got != http.StatusForbidden {
+		t.Errorf("restricted key, another user's load: status = %d, want %d", got, http.StatusForbidden)
+	}
+	if got := post("/load", "public-key", own); got != http.StatusOK {
+		t.Errorf("restricted key, its own user's load: status = %d, want %d", got, http.StatusOK)
+	}
+	if got := post("/delete", "public-key", own); got != http.StatusUnauthorized {
+		t.Errorf("restricted key, delete: status = %d, want %d", got, http.StatusUnauthorized)
 	}
 }

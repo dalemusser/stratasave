@@ -181,6 +181,9 @@ rate_limit_enabled = false
 | `api_key` | string | `""` | API key for external API access (empty = disabled) |
 | `api_keys_extra` | string | `""` | Further accepted API keys, comma-separated; lets a key be replaced without downtime (add the new key here, move the clients, then make it `api_key` and remove the old one) |
 | `admin_api_key` | string | `""` | API key for the delete endpoints. When set, `/api/state/delete` and `/api/settings/delete` accept only this key; keep it on servers, never in a game client. Empty = the delete endpoints accept the keys above |
+| `api_key_restricted` | string | `""` | An API key accepted only for the user ids in `api_key_restricted_user_ids`. For a key that cannot be kept secret (one built into a game's source for running it without a host) |
+| `api_key_restricted_user_ids` | string | `"000000000000000000000001"` | User ids the restricted key may be used for, comma-separated (default: the game's built-in developer user). The delete endpoints never accept this key |
+| `api_key_restricted_enforce` | bool | `true` | Refuse the restricted key for any other user id (403). `false` lets the request through and logs it, to see who still uses the key before refusing starts |
 
 ---
 

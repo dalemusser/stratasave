@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dalemusser/stratasave/internal/app/system/auth"
 	"github.com/dalemusser/stratasave/internal/testutil"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.uber.org/zap"
@@ -523,7 +524,7 @@ func TestRoutes(t *testing.T) {
 	logger := zap.NewNop()
 	h := NewHandler(db, logger, "all")
 
-	router := Routes(h, nil, []string{"test-api-key"}, []string{"test-admin-key"}, logger)
+	router := Routes(h, nil, []string{"test-api-key"}, auth.RestrictedKey{}, []string{"test-admin-key"}, logger)
 	if router == nil {
 		t.Fatal("Routes() returned nil")
 	}
@@ -922,7 +923,8 @@ func TestRoutesDeleteKey(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	logger := zap.NewNop()
 	h := NewHandler(db, logger, "all")
-	router := Routes(h, nil, []string{"client-key", "client-key-2"}, []string{"admin-key"}, logger)
+	restricted := auth.RestrictedKey{Key: "public-key", UserIDs: []string{"000000000000000000000001"}, Enforce: true}
+	router := Routes(h, nil, []string{"client-key", "client-key-2"}, restricted, []string{"admin-key"}, logger)
 
 	post := func(path, key string, body map[string]interface{}) int {
 		bodyBytes, _ := json.Marshal(body)
@@ -941,6 +943,12 @@ func TestRoutesDeleteKey(t *testing.T) {
 		"save_data": map[string]interface{}{"level": 1},
 	}
 	who := map[string]interface{}{"user_id": "111111111111111111111111", "game": "testgame"}
+	own := map[string]interface{}{"user_id": "000000000000000000000001", "game": "testgame"}
+	ownSave := map[string]interface{}{
+		"user_id":   "000000000000000000000001",
+		"game":      "testgame",
+		"save_data": map[string]interface{}{"level": 1},
+	}
 
 	tests := []struct {
 		name string
@@ -958,6 +966,12 @@ func TestRoutesDeleteKey(t *testing.T) {
 		{"delete with the second client key", "/delete", "client-key-2", who, http.StatusUnauthorized},
 		{"delete without a key", "/delete", "", who, http.StatusUnauthorized},
 		{"delete with the admin key", "/delete", "admin-key", who, http.StatusOK},
+		// The restricted key: its own user only, and never a delete.
+		{"restricted key, another user's save", "/save", "public-key", save, http.StatusForbidden},
+		{"restricted key, another user's load", "/load", "public-key", who, http.StatusForbidden},
+		{"restricted key, its own user's save", "/save", "public-key", ownSave, http.StatusCreated},
+		{"restricted key, its own user's load", "/load", "public-key", own, http.StatusOK},
+		{"restricted key, delete of its own user", "/delete", "public-key", own, http.StatusUnauthorized},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
